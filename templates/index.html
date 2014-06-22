@@ -1,0 +1,11 @@
+$def with (result)
+
+$if result:
+    $for source in result:
+        <h3>$source</h3>
+        <ul>
+        $for title, link in result[source]:
+            <li><a href="$link">$title</a></li>
+        </ul>
+$else:
+    No query string provided, going back to sleep!
