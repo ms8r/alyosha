@@ -1,4 +1,5 @@
 argparse==1.2.1
+gunicorn==19.0.0
 lxml==3.3.5
 requests==2.3.0
 web.py==0.37

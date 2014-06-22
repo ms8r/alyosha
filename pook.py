@@ -1,3 +1,4 @@
+import os
 import web
 import threading
 from alyosha import alyosha as al
@@ -21,6 +22,8 @@ class index:
             result[source] = link_list
         return render.index(result)
 
-if __name__ == '__main__':
-    app = web.application(urls, globals())
-    app.run()
+# if __name__ == '__main__':
+
+app = web.application(urls, globals())
+wsgiapp = app.wsgifunc()
+# app.run()

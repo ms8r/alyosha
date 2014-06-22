@@ -1,1 +1,1 @@
-web: gunicorn pook:app
+web: gunicorn pook:wsgiapp
