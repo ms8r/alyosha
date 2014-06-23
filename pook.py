@@ -16,10 +16,7 @@ class index:
         result = {}
         if not qp.q:
             return render.index(result)
-        for source in al.SOURCE_SITES:
-            html = al.site_results(al.SOURCE_SITES[source], qp.q)
-            link_list = al.result_links(html, max_links=3)
-            result[source] = link_list
+        result = al.full_results(al.SOURCE_SITES, qp.q, max_links=3)
         return render.index(result)
 
 # if __name__ == '__main__':
