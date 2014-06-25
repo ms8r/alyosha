@@ -1,5 +1,14 @@
+source_sites = {
+    'WSJ': 'wsj.com',
+    'The Guardian': 'theguardian.com',
+    'The Economist': 'economist.com',
+    'Der Spiegel': 'spiegel.de',
+    'Bloomberg': 'bloomberg.com',
+    'Huffington Post': 'huffingtonpost.com'
+}
+
 # user agents tuple taken from howdoi:
-USER_AGENTS = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/20100101 Firefox/11.0',
+user_agents = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/20100101 Firefox/11.0',
                'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100 101 Firefox/22.0',
                'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0',
                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_4) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.46 Safari/536.5',
@@ -7,7 +16,8 @@ USER_AGENTS = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/2010
 
 # list of stop words taken from
 # http://norm.al/2009/04/14/list-of-english-stop-words/
-STOP_WORDS = frozenset([
+# augmented by capitalzed words
+stop_words = frozenset([
     'a', 'about', 'above', 'across', 'after', 'afterwards', 'again',
     'against', 'all', 'almost', 'alone', 'along', 'already', 'also',
     'although', 'always', 'am', 'among', 'amongst', 'amoungst', 'amount',
@@ -24,12 +34,12 @@ STOP_WORDS = frozenset([
     'first', 'five', 'for', 'former', 'formerly', 'forty', 'found', 'four',
     'from', 'front', 'full', 'further', 'get', 'give', 'go', 'had', 'has',
     'hasnt', 'have', 'he', 'hence', 'her', 'here', 'hereafter', 'hereby',
-    'herein', 'hereupon', 'hers', 'herse”', 'him', 'himse”', 'his', 'how',
+    'herein', 'hereupon', 'hers', 'herself', 'him', 'himself', 'his', 'how',
     'however', 'hundred', 'i', 'ie', 'if', 'in', 'inc', 'indeed', 'interest',
-    'into', 'is', 'it', 'its', 'itse”', 'keep', 'last', 'latter', 'latterly',
+    'into', 'is', 'it', 'its', 'itself', 'keep', 'last', 'latter', 'latterly',
     'least', 'less', 'ltd', 'made', 'many', 'may', 'me', 'meanwhile',
     'might', 'mill', 'mine', 'more', 'moreover', 'most', 'mostly', 'move',
-    'much', 'must', 'my', 'myse”', 'name', 'namely', 'neither', 'never',
+    'much', 'must', 'my', 'myself', 'name', 'namely', 'neither', 'never',
     'nevertheless', 'next', 'nine', 'no', 'nobody', 'none', 'noone', 'nor',
     'not', 'nothing', 'now', 'nowhere', 'of', 'off', 'often', 'on', 'once',
     'one', 'only', 'onto', 'or', 'other', 'others', 'otherwise', 'our',
@@ -65,12 +75,12 @@ STOP_WORDS = frozenset([
     'First', 'Five', 'For', 'Former', 'Formerly', 'Forty', 'Found', 'Four',
     'From', 'Front', 'Full', 'Further', 'Get', 'Give', 'Go', 'Had', 'Has',
     'Hasnt', 'Have', 'He', 'Hence', 'Her', 'Here', 'Hereafter', 'Hereby',
-    'Herein', 'Hereupon', 'Hers', 'Herse”', 'Him', 'Himse”', 'His', 'How',
+    'Herein', 'Hereupon', 'Hers', 'Herself', 'Him', 'Himself', 'His', 'How',
     'However', 'Hundred', 'I', 'Ie', 'If', 'In', 'Inc', 'Indeed', 'Interest',
-    'Into', 'Is', 'It', 'Its', 'Itse', 'Keep', 'Last', 'Latter', 'Latterly',
+    'Into', 'Is', 'It', 'Its', 'Itself', 'Keep', 'Last', 'Latter', 'Latterly',
     'Least', 'Less', 'Ltd', 'Made', 'Many', 'May', 'Me', 'Meanwhile',
     'Might', 'Mill', 'Mine', 'More', 'Moreover', 'Most', 'Mostly', 'Move',
-    'Much', 'Must', 'My', 'Myse”', 'Name', 'Namely', 'Neither', 'Never',
+    'Much', 'Must', 'My', 'Myself', 'Name', 'Namely', 'Neither', 'Never',
     'Nevertheless', 'Next', 'Nine', 'No', 'Nobody', 'None', 'Noone', 'Nor',
     'Not', 'Nothing', 'Now', 'Nowhere', 'Of', 'Off', 'Often', 'On', 'Once',
     'One', 'Only', 'Onto', 'Or', 'Other', 'Others', 'Otherwise', 'Our',
@@ -90,5 +100,9 @@ STOP_WORDS = frozenset([
     'Wherein', 'Whereupon', 'Wherever', 'Whether', 'Which', 'While',
     'Whither', 'Who', 'Whoever', 'Whole', 'Whom', 'Whose', 'Why', 'Will',
     'With', 'Within', 'Without', 'Would', 'Yet', 'You', 'Your', 'Yours',
-    'Yourself', 'Yourselves'
+    'Yourself', 'Yourselves',
+    # added items based on early trial and error:
+    'says', 'said', 'report', 'Mr', 'Mrs', 'percent', 'including', 'end',
+    'likely', 'unlikely'
+
 ])
