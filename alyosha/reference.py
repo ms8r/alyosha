@@ -1,10 +1,22 @@
 source_sites = {
-    'WSJ': 'wsj.com',
-    'The Guardian': 'theguardian.com',
-    'The Economist': 'economist.com',
-    'Der Spiegel': 'spiegel.de',
-    'Bloomberg': 'bloomberg.com',
-    'Huffington Post': 'huffingtonpost.com'
+    'WSJ': ('wsj.com', -0.5),
+    'The Guardian': ('theguardian.com', 0.5),
+    'The Economist': ('economist.com', -0.5),
+    'Der Spiegel': ('spiegel.de', 0.25),
+    'Huffington Post': ('huffingtonpost.com', 0.5),
+    'Lawfare': ('lawfareblog.com', -0.5),
+    'Brookings': ('brookings.edu', 0.25),
+    'Slate Magazine': ('slate.com', 0.5),
+    'Washington Post': ('washingtonpost.com', 0.5),
+    'National Review': ('nationalreview.com', -0.75),
+    'Townhall': ('townhall.com', -1.0),
+    'The Weekly Standard': ('weeklystandard.com', -1.0),
+    'Daily Kos': ('dailykos.com', 0.9),
+    'The Nation': ('thenation.com', 1.0),
+    'FactCheck': ('factcheck.org', 0.0),
+    'Vote Smart': ('votesmart.org', 0.0),
+    'EconLib': ('econlib.org', -0.5),
+    'Hoover Institution': ('hoover.org', -0.5)
 }
 
 # user agents tuple taken from howdoi:
@@ -102,7 +114,13 @@ stop_words = frozenset([
     'With', 'Within', 'Without', 'Would', 'Yet', 'You', 'Your', 'Yours',
     'Yourself', 'Yourselves',
     # added items based on early trial and error:
-    'says', 'said', 'report', 'Mr', 'Mrs', 'percent', 'including', 'end',
+    'says', 'said', 'reported', 'Mr', 'Mrs', 'percent', 'including', 'end',
     'likely', 'unlikely'
+])
 
+# additional stop words that will only be culled from final search string, i.e.
+# these words are still available to construct "search phrases"
+late_kills = frozenset([
+    'report', 'reported', 'reporting', 'reporting', 'face', 'facing',
+    'Facing', 'Report', 'Reported', 'Face'
 ])
