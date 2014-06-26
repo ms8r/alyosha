@@ -22,8 +22,8 @@ class index:
         result = al.full_results(source_sites, qp.q, max_links=3)
         return render.index(result)
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    app = web.application(urls, globals())
-    wsgiapp = app.wsgifunc()
-    # app.run()
+app = web.application(urls, globals())
+wsgiapp = app.wsgifunc()
+# app.run()
