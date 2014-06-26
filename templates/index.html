@@ -5,6 +5,6 @@ $if result:
     $for source in result:
         <h2>$source</h2>
         $for title, link in result[source]:
-        <h3><a href="$link">$title</a></h3>
+            <h3><a href="$link">$title</a></h3>
 $else:
     No query string provided, going back to sleep!
