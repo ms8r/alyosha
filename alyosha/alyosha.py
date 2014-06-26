@@ -42,7 +42,7 @@ def site_results(site, query):
     result = requests.get(SEARCH_URL.format(site, url_quote(query)),
             headers={'User-Agent': random.choice(REF.user_agents)},
             proxies=get_proxies())
-    return result
+    return html.fromstring(result.text)
 
 def result_links(html, max_links=0):
     """
@@ -80,8 +80,8 @@ def full_results(source_sites, query, max_links=0):
         If > 0 at most max_links results will be returned per source site.
     """
     result = {}
-    for source in REF.source_sites:
-        html = site_results(source_sites[source][0], query)
+    for source in source_sites:
+        html = site_results(source_sites[source], query)
         link_list = result_links(html, max_links)
         result[source] = link_list
     return result
