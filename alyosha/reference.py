@@ -7,7 +7,8 @@ source_sites = {
     'Lawfare': ('lawfareblog.com', -0.5),
     'Brookings': ('brookings.edu', 0.25),
     'Slate Magazine': ('slate.com', 0.5),
-    'Washington Post': ('washingtonpost.com', 0.5),
+    'Washington Post': ('washingtonpost.com', 0.25),
+    'New York Times': ('nytimes.com', 0.25)
     'National Review': ('nationalreview.com', -0.7),
     'Townhall': ('townhall.com', -1.0),
     'The Weekly Standard': ('weeklystandard.com', -0.7),
@@ -17,7 +18,9 @@ source_sites = {
     'Vote Smart': ('votesmart.org', 0.0),
     'EconLib': ('econlib.org', -0.5),
     'Hoover Institution': ('hoover.org', -0.5),
-    'Financial Times': ('ft.com', -0.4)
+    'Financial Times': ('ft.com', -0.4),
+    'FiveThirtyEight': ('fivethirtyeight.com', 0.0),
+    'Christian Science Monitor': ('csmonitor.com', -0.25)
 }
 
 # user agents tuple taken from howdoi:

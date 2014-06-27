@@ -3,10 +3,15 @@ from goose import Goose
 from lxml import html
 import random
 import re
+import logging
+import os.path
 from collections import Counter
 import unicodedata
 
 import reference as REF
+
+logger = logging.getLogger(os.path.basename(__file__))
+logger.setLevel(logging.DEBUG)
 
 try:
     from urllib.parse import quote as url_quote
@@ -87,7 +92,7 @@ def full_results(source_sites, query, max_links=0):
     return result
 
 
-def build_search_string(ref_url, min_count=5, stop_words=None,
+def build_search_string(ref_url, min_count=0, stop_words=None,
                         late_kills=None):
     """
     Analyses the page at ref_url to returns a list of search terms, sorted in
@@ -99,7 +104,9 @@ def build_search_string(ref_url, min_count=5, stop_words=None,
     ref_url : str
         Web page from which search terms are to be extracted
     min_count : int
-        Minimum count for words and phrases to make it into the search string
+        Minimum count for words and phrases to make it into the search string.
+        If `min_count == 0` the threshold will be calculated based on the
+        article length (excluding stop words).
     stop_words : sequence or set
         List or set with common words to be excluded from search string.
         `stop_list` will be applied *before* any multiple word phrases are
@@ -126,6 +133,12 @@ def build_search_string(ref_url, min_count=5, stop_words=None,
             random.choice(REF.user_agents)}, proxies=get_proxies())
     article = Goose().extract(raw_html=result.text)
     article.wlist = _build_wlist(article.cleaned_text, stop_words)
+    wcount = len(article.wlist)
+    logger.debug("built %d word list for article \"%s\"" % (wcount,
+                                                            article.title))
+    if min_count == 0:
+        min_count = int(round(wcount/100.))
+        logger.debug("min_count calculated to %d" % min_count)
 
     # get word/phrase counts:
     search_term_list = []
