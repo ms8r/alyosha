@@ -126,5 +126,6 @@ stop_words = frozenset([
 # these words are still available to construct "search phrases"
 late_kills = frozenset([
     'report', 'reported', 'reporting', 'reporting', 'face', 'facing',
-    'Facing', 'Report', 'Reported', 'Face'
+    'read', 'reads', 'different',
+    'Facing', 'Report', 'Reported', 'Face', 'Read', 'Reads', 'Different'
 ])
