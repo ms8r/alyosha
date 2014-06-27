@@ -9,7 +9,8 @@ from alyosha import reference as REF
 
 # Configure the logger
 fmt = "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
-logging.basicConfig(filename='alyosha.log',
+logging.basicConfig(
+                    # filename='alyosha.log',
                     level=logging.DEBUG,
                     format=fmt)
 logger = logging.getLogger(os.path.basename(__file__))
@@ -67,8 +68,10 @@ class index:
             result = al.full_results(source_sites, query, max_links=3)
             return render.results(result)
 
-# if __name__ == '__main__':
+# For serving using any wsgi server
+wsgi_app = web.application(urls, globals()).wsgifunc()
 
-app = web.application(urls, globals())
-wsgiapp = app.wsgifunc()
-# app.run()
+if __name__ == '__main__':
+
+    app = web.application(urls, globals())
+    app.run()
