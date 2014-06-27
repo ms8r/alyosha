@@ -6,7 +6,7 @@ from alyosha import reference as REF
 # TODO: add threading for web requests
 
 # Configure the logger
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 render = web.template.render('templates/')
 
@@ -37,23 +37,23 @@ class index:
             return render.index(form)
         else:
             ref_url = form['URL'].value
-            logging.debug("ref_url=%s" % ref_url)
+            # logging.debug("ref_url=%s" % ref_url)
             scope = form['Scope'].value
-            logging.debug("scope=%s" % scope)
+            # logging.debug("scope=%s" % scope)
             min_count = int(form['MinCount'].value)
-            logging.debug("min_count=%d" % min_count)
+            # logging.debug("min_count=%d" % min_count)
             search_phrases, search_words = al.build_search_string(
                     ref_url, min_count=min_count, stop_words=REF.stop_words,
                     late_kills=REF.late_kills)
-            logging.debug("search_phrases=%s" % search_phrases)
-            logging.debug("search_words=%s" % search_words)
+            # logging.debug("search_phrases=%s" % search_phrases)
+            # logging.debug("search_words=%s" % search_words)
             query = search_phrases
             if scope == 'narrow':
                 query = "%s+%s" % (query, search_words)
             source_sites = dict((key, value[0]) for (key, value) in
                                 REF.source_sites.iteritems()
                                 if abs(value[1]) <= 0.5)
-            logging.debug("source_sites=%s" % source_sites.keys())
+            # logging.debug("source_sites=%s" % source_sites.keys())
             result = al.full_results(source_sites, query, max_links=3)
             return render.results(result)
 

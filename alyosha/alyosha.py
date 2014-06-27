@@ -130,11 +130,11 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
     article = Goose().extract(raw_html=result.text)
     article.wlist = _build_wlist(article.cleaned_text, stop_words)
     wcount = len(article.wlist)
-    logging.debug("built %d word list for article \"%s\"" % (wcount,
-                                                            article.title))
+    # logging.debug("built %d word list for article \"%s\"" % (wcount,
+    #                                                         article.title))
     if min_count == 0:
         min_count = int(round(wcount/100.))
-        logging.debug("min_count calculated to %d" % min_count)
+        # logging.debug("min_count calculated to %d" % min_count)
 
     # get word/phrase counts:
     search_term_list = []
