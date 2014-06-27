@@ -8,7 +8,7 @@ source_sites = {
     'Brookings': ('brookings.edu', 0.25),
     'Slate Magazine': ('slate.com', 0.5),
     'Washington Post': ('washingtonpost.com', 0.25),
-    'New York Times': ('nytimes.com', 0.25)
+    'New York Times': ('nytimes.com', 0.25),
     'National Review': ('nationalreview.com', -0.7),
     'Townhall': ('townhall.com', -1.0),
     'The Weekly Standard': ('weeklystandard.com', -0.7),
