@@ -10,7 +10,7 @@ from alyosha import reference as REF
 # Configure the logger
 fmt = "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
 logging.basicConfig(
-                    filename='alyosha.log',
+                    # filename='alyosha.log',
                     level=logging.DEBUG,
                     format=fmt)
 logger = logging.getLogger(os.path.basename(__file__))
