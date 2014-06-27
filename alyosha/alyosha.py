@@ -1,7 +1,6 @@
 import requests
 from goose import Goose
 from lxml import html
-from lxml.html.clean import Cleaner
 import random
 import re
 from collections import Counter
@@ -43,6 +42,7 @@ def site_results(site, query):
             headers={'User-Agent': random.choice(REF.user_agents)},
             proxies=get_proxies())
     return html.fromstring(result.text)
+
 
 def result_links(html, max_links=0):
     """
@@ -87,7 +87,8 @@ def full_results(source_sites, query, max_links=0):
     return result
 
 
-def build_search_string(ref_url, min_count=5, stop_words=None, late_kills=None):
+def build_search_string(ref_url, min_count=5, stop_words=None,
+                        late_kills=None):
     """
     Analyses the page at ref_url to returns a list of search terms, sorted in
     order of decreasing "importance". Multiple word phrases will occur before
@@ -104,12 +105,12 @@ def build_search_string(ref_url, min_count=5, stop_words=None, late_kills=None):
         `stop_list` will be applied *before* any multiple word phrases are
         constructed.
     late_kills : sequence or set
-        Like `stop_words` but the words in `late_kills` will only be eliminated
-        from the search string *after* multiple word phrases have been
-        constructed. This you can have a word like 'report' appear in the seach
-        string as part of a multiple word phrase ("OECD Report on Public
-        Health") but not as a single word (which would have almost zero
-        selectivity for a news article.
+        Like `stop_words` but the words in `late_kills` will only be
+        eliminated from the search string *after* multiple word phrases have
+        been constructed. This you can have a word like 'report' appear in
+        the seach string as part of a multiple word phrase ("OECD Report on
+        Public Health") but not as a single word (which would have almost
+        zero selectivity for a news article.
 
     Returns:
     --------
@@ -193,4 +194,3 @@ def _build_wlist(raw_text, stop_words):
     raw_text = re.sub(ur'n\'t', '', raw_text)
     wlist = re.findall(ur'\w+', raw_text)
     return [w for w in wlist if w not in stop_words]
-
