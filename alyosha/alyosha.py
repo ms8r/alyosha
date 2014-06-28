@@ -6,6 +6,7 @@ import re
 import logging
 from collections import Counter
 import unicodedata
+import urllib
 
 import reference as REF
 
@@ -203,3 +204,6 @@ def _build_wlist(raw_text, stop_words):
     raw_text = re.sub(ur'n\'t', '', raw_text)
     wlist = re.findall(ur'\w+', raw_text)
     return [w for w in wlist if w not in stop_words]
+
+# to extract all links of non-ad results, including their snippets(descriptions) and titles.
+#            'results': (['li.g', 'h3.r > a:first-child', 'div.s span.st'], ),
