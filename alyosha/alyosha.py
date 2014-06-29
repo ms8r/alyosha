@@ -61,10 +61,14 @@ class SiteResults(object):
 
     # XPath strings to grab search results
     _prefix = '//div[@id="ires"]//li[@class="g"]'
-    _xp_title = _prefix + '//h3[@class="r"]'
+    # `_xp_title` points a tags containing titles as text content and urls as
+    # `href` attributes: need multiple xp's to collect news items at top of
+    # results and regular results
+    _xp_title = [_prefix + '//span[@class="tl"]/a[1]',
+                 _prefix + '//h3[@class="r"]/a[1]'
+    ]
     _xp_link = _prefix + '//cite'
     _xp_desc = _prefix + '//div[@class="s"]//span[@class="st"]'
-    _xp_url = _xp_title + '/a/@href'
     _xp_resnum = '//div[@id="resultStats"]'
 
     _resnum_re = re.compile(r'\D*([\d.,]+) result')
@@ -95,16 +99,18 @@ class SiteResults(object):
             self.resnum = None
         logging.debug("google reports %s results" % self.resnum)
 
-        titles = [c.text_content() for c in
-                  parsed.xpath(SiteResults._xp_title)]
-        if not titles:
-            logging.debug("could not find any search result titles, "
-                          "raising EmptySerachResult")
+        atags = []
+        for xp in SiteResults._xp_title:
+            atags += parsed.xpath(xp)
+        if not atags:
+            logging.debug("could not find any search results, "
+                          "raising EmptySearchResult")
             raise EmptySearchResult
 
+        titles = [a.text_content() for a in atags]
+        urls = [a.attrib['href'] for a in atags]
         links = [c.text_content() for c in parsed.xpath(SiteResults._xp_link)]
         descs = [c.text_content() for c in parsed.xpath(SiteResults._xp_desc)]
-        urls = parsed.xpath(SiteResults._xp_url)
         assert len(titles) == len(links) == len(descs) == len(urls)
 
         self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
