@@ -6,7 +6,6 @@ import re
 import logging
 from collections import Counter
 import unicodedata
-import urllib
 
 import reference as REF
 
@@ -20,11 +19,9 @@ try:
 except ImportError:
     from urllib.request import getproxies
 
-SEARCH_URL = 'https://www.google.com/search?q=site:{0}%20{1}'
 
-
-# get_proxies shamelessly copied from howdoi:
-def get_proxies():
+# get_proxies shamrequestelessly copied from howdoi:
+def _get_proxies():
     proxies = getproxies()
     filtered_proxies = {}
     for key, value in proxies.items():
@@ -36,41 +33,88 @@ def get_proxies():
     return filtered_proxies
 
 
-def site_results(site, query):
-    """
-    Returns lxml.etree with search results
-    """
-    result = requests.get(SEARCH_URL.format(site, url_quote(query)),
-            headers={'User-Agent': random.choice(REF.user_agents)},
-            proxies=get_proxies())
-    return html.fromstring(result.text)
+class EmptySearchResult(Exception):
+    pass
 
 
-def result_links(html, max_links=0):
+class SiteResults(object):
     """
-    Returns a list with (heading, url) tuples. If max_links > 0 at most
-    max_links links will be returned
+    Container for search results.
+
+    Attributes:
+    -----------
+    res : List of dicts
+        Keys are 'title', 'link', 'description', 'url'; res['link'] may miss
+        the scheme (e.g. 'http://') and contain ellipses (...) whereas 'url'
+        will always be a complete valid url.
+    resnum : int
+        Number of results as returned by Google
+    site : str
+        `site` argument that was passed to constructor
+    query : str
+        Search query that was passed to constructor
+
+    Will raise `EmptySearchResult` if no results can be found.
     """
-    # TODO: consider replace\ing by xgoogle
-    results = html.xpath('//h3[@class="r"]/a')
-    if max_links:
-        results = results[:min(len(results), max_links)]
-    headings = [t.text_content() for t in results]
-    urls = [t.attrib['href'].replace('/url?q=', '', 1) for t in results]
-    return zip(headings, urls)
+
+    _search_url = 'https://www.google.com/search?q=site:{0}%20{1}'
+
+    # XPath strings to grab search results
+    _prefix = '//div[@id="ires"]//li[@class="g"]'
+    _xp_title = _prefix + '//h3[@class="r"]'
+    _xp_link = _prefix + '//cite'
+    _xp_desc = _prefix + '//div[@class="s"]//span[@class="st"]'
+    _xp_url = _xp_title + '/a/@href'
+    _xp_resnum = '//div[@id="resultStats"]'
+
+    _resnum_re = re.compile(r'\D*([\d.,]+) result')
+
+    def __init__(self, site, query):
+        """
+        Arguments:
+        ----------
+        site : str
+            Site to which search is to be restricted (e.g. 'nytimes.com')
+        query : str
+            Query ro be submitted; will be url quoted before appending to url
+        """
+        self.site = site
+        self.query = query
+        logging.debug("searching for '%s' on %s" % (query, site))
+
+        result = requests.get(SiteResults._search_url.format(site,
+                url_quote(query)), headers={'User-Agent':
+                random.choice(REF.user_agents)}, proxies=_get_proxies())
+        parsed = html.fromstring(result.text)
+
+        try:
+            s = parsed.xpath(SiteResults._xp_resnum)[0].text_content()
+            m = SiteResults._resnum_re.match(s) if s else None
+            self.resnum = int(m.group(1).replace(',', '').replace('.', ''))
+        except IndexError:
+            self.resnum = None
+        logging.debug("google reports %s results" % self.resnum)
+
+        titles = [c.text_content() for c in
+                  parsed.xpath(SiteResults._xp_title)]
+        if not titles:
+            logging.debug("could not find any search result titles, "
+                          "raising EmptySerachResult")
+            raise EmptySearchResult
+
+        links = [c.text_content() for c in parsed.xpath(SiteResults._xp_link)]
+        descs = [c.text_content() for c in parsed.xpath(SiteResults._xp_desc)]
+        urls = parsed.xpath(SiteResults._xp_url)
+        assert len(titles) == len(links) == len(descs) == len(urls)
+
+        self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
+                    for t, a, d, u in zip(titles, links, descs, urls)]
+        logging.debug("stored %d results in res dict" % len(titles))
 
 
-def fetch_teasers(urls, max_len=0):
+def full_results(source_sites, query):
     """
-    Returns a list of article texts for the urls passed in `urls`.
-    If `max_len > 0` at most `max_len` characters will be returned per teaser.
-    """
-    raise NotImplementedError
-
-
-def full_results(source_sites, query, max_links=0):
-    """
-    Returns a dict mapping resulting link_lists to source sites.
+    Returns a dict with SiteResults objects mapped to their respective sources.
 
     Arguments:
     ---------
@@ -78,15 +122,15 @@ def full_results(source_sites, query, max_links=0):
         Mapping of source names to urls
     query : str
         Seach query string
-    max_links : int
-        If > 0 at most max_links results will be returned per source site.
     """
-    result = {}
-    for source in source_sites:
-        html = site_results(source_sites[source], query)
-        link_list = result_links(html, max_links)
-        result[source] = link_list
-    return result
+    res = {}
+    for s in source_sites:
+        try:
+            res[s] = SiteResults(source_sites[s], query)
+        except EmptySearchResult:
+            continue
+
+    return res
 
 
 def build_search_string(ref_url, min_count=0, stop_words=None,
@@ -127,7 +171,7 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
         late_kills = []
 
     result = requests.get(ref_url, headers={'User-Agent':
-            random.choice(REF.user_agents)}, proxies=get_proxies())
+            random.choice(REF.user_agents)}, proxies=_get_proxies())
     article = Goose().extract(raw_html=result.text)
     article.wlist = _build_wlist(article.cleaned_text, stop_words)
     wcount = len(article.wlist)
@@ -169,8 +213,7 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
             phrase_search_str = "%s%s%s" % (phrase_search_str, sep,
                                             ' '.join(tlist))
 
-    return (phrase_search_str.replace(' ', '+'),
-            word_search_str.replace(' ', '+'))
+    return (phrase_search_str, word_search_str)
 
 
 def _phrase_counts(word_list, phrase_length=2, min_count=0):
@@ -204,6 +247,3 @@ def _build_wlist(raw_text, stop_words):
     raw_text = re.sub(ur'n\'t', '', raw_text)
     wlist = re.findall(ur'\w+', raw_text)
     return [w for w in wlist if w not in stop_words]
-
-# to extract all links of non-ad results, including their snippets(descriptions) and titles.
-#            'results': (['li.g', 'h3.r > a:first-child', 'div.s span.st'], ),

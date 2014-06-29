@@ -1,10 +1,26 @@
-$def with (result)
+$def with (result, query)
+
+$code:
+    # max. number of results to show per source:
+    max_res = 3
 
 $if result:
     <h1>...you probably won't like these, but they may be interesting</h1>
+    <p>Results for search string <em>"$query"</em>:</p>
     $for source in result:
         <h2>$source</h2>
-        $for title, link in result[source]:
-            <h3><a href="$link">$title</a></h3>
+        $code:
+            num_source_res = len(result[source].res)
+            if num_source_res < max_res:
+                num_res = num_source_res
+            else:
+                num_res = max_res
+
+        <p><em>Google reports $result[source].resnum hits, showing top $num_res</em></p>
+
+        $for r in result[source].res[:num_res]:
+            <h3><a href="$r['url']">$r['title']</a></h3>
+            <h4>$r['link']</h4>
+            <p>$r['desc']</p>
 $else:
-    No query string provided, going back to sleep!
+    No results found, going back to sleep!
