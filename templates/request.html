@@ -1,12 +1,28 @@
-$def with (form)
+$def with (formDict)
 
 <form name="main" method="post">
 
 <h1>If you like this...</h1>
 
-$if not form.valid:
+<h2 class="formheader">Enter URL of the article you wish to search additional sources for</h2>
+$if not formDict['url'].valid:
     <p class="error">Try again, AmeriCAN</p>
+$:formDict['url'].render()
 
-$:form.render()
+<h2 class="formheader">Select search scope</h2>
+$if not formDict['searchScope'].valid:
+    <p class="error">Try again, AmeriCAN</p>
+$:formDict['searchScope'].render()
+
+<h2 class="formheader">Select the minimum frequency for a word or phrase to be included into the search string</h2>
+<p class="inputhint"><em>Note: '0' will cause this value to be automagically calculated based on the length of the article.</em></p>
+$if not formDict['minCount'].valid:
+    <p class="error">Try again, AmeriCAN</p>
+$:formDict['minCount'].render()
+
+<h2 class="formheader">Select sources to search</h2>
+$if not formDict['sourceSel'].valid:
+    <p class="error">Try again, AmeriCAN</p>
+$:formDict['sourceSel'].render()
 
 <input type="submit" /> </form>

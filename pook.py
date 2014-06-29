@@ -17,34 +17,54 @@ urls = (
     '/sources', 'sources'
 )
 
-urlForm = form.Form(form.Textbox('URL', form.notnull,
-                        decription='Please enter the URL of an article/post '
-                        'for which you would like to see alternative view '
-                        'points'),
-                    form.Radio('Scope', [('narrow', 'include phrases '
-                        'and single words in query'), ('broader',
-                        'use only phrases'), ('wide', 'use only words')],
-                        value='narrow'),
-                    form.Dropdown('MinCount', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                        value=5))
+urlForm = form.Form(
+        form.Textbox('URL', form.notnull, decription='Reference URL'),
+        class_='urlform')
+
+searchScopeForm = form.Form(
+        form.Radio('Scope', [('narrow', 'include phrases and single words '
+        'in query'), ('broader', 'use only phrases'), ('wide', 'use only '
+        'words')], value='narrow'), class_='searchscopeform')
+
+minCountForm = form.Form(
+    form.Dropdown('MinCount', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], value=0))
+
+sourceSelForm = form.Form(
+                    form.Checkbox('Left field'),
+                    form.Checkbox('Center'),
+                    form.Checkbox('Right field'))
+
+# source grouping: intervals below are open on the left
+sourceLeaningGroups = {
+        'Left field': (0.5, 1.0),
+        'Center': (-0.5, 0.5),
+        'Right field': (-1.0, -0.5)
+}
+
+formDict = {
+        'url': urlForm,
+        'searchScope': searchScopeForm,
+        'minCount': minCountForm,
+        'sourceSel': sourceSelForm
+}
 
 
 class request(object):
 
     def GET(self):
-        form = urlForm()
-        return render.request(form)
+        return render.request(formDict)
 
     def POST(self):
-        form = urlForm()
-        if not form.validates():
-            return render.request(form)
+        for form in formDict.values():
+            if not form.validates():
+                return render.request(formDict)
         else:
-            ref_url = form['URL'].value
+            form_data = web.input()
+            ref_url = form_data['URL']
             logging.debug("ref_url=%s" % urllib.unquote(ref_url))
-            scope = form['Scope'].value
+            scope = form_data['Scope']
             logging.debug("scope=%s" % scope)
-            min_count = int(form['MinCount'].value)
+            min_count = int(form_data['MinCount'])
             logging.debug("min_count=%d" % min_count)
             search_phrases, search_words = al.build_search_string(
                     ref_url, min_count=min_count, stop_words=REF.stop_words,
@@ -57,10 +77,19 @@ class request(object):
                 query = search_phrases
             else:
                 query = search_words
-            source_sites = dict((key, value[0]) for (key, value) in
-                                REF.source_sites.iteritems()
-                                if abs(value[1]) <= 0.5)
-            logging.debug("source_sites=%s" % source_sites.keys())
+            s_ranges = [v for (k, v) in sourceLeaningGroups.iteritems()
+                        if form_data.has_key(k)]
+            logging.debug("source ranges: %s" % s_ranges)
+            # compile all sources to included in dict:
+            source_sites = {}
+            for (k, v) in REF.source_sites.iteritems():
+                for r in s_ranges:
+                    if r[0] <= v[1] < r[1]:
+                        source_sites[k] = v[0]
+                        break
+            logging.debug("source sites: %s" % source_sites.keys())
+            if not source_sites:
+                return render.request(formDict)
             result = al.full_results(source_sites, query)
             return render.results(result, query)
 
