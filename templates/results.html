@@ -1,4 +1,4 @@
-$def with (result, query)
+$def with (result, query, source_list, back_link)
 
 $code:
     # max. number of results to show per source:
@@ -6,7 +6,8 @@ $code:
 
 $if result:
     <h1>...you probably won't like these, but they may be interesting</h1>
-    <p>Results for search string <em>'$query'</em>:</p>
+    <p>Searched $', '.join(source_list) for search string <em>'$query'</em>:</p>
+    <p><a href="$back_link">&lt;&lt; Go back</a></p>
     $for source in result:
         <h2>$source</h2>
         $code:
@@ -22,5 +23,9 @@ $if result:
             <h3><a href="$r['url']">$r['title']</a></h3>
             <h4>$r['link']</h4>
             <p>$r['desc']</p>
+
+    <p><a href="$back_link">&lt;&lt; Go back</a></p>
+    
 $else:
-    No results found, going back to sleep!
+    <p>Nothing to show!</p> 
+    <p><a href="$back_link">&lt;&lt; Go back</a></p>

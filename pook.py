@@ -14,7 +14,8 @@ render = web.template.render('templates/')
 urls = (
     '/', 'index',
     '/request', 'request',
-    '/sources', 'sources'
+    '/sources', 'sources',
+    '/error', 'error'
 )
 
 urlForm = form.Form(
@@ -47,6 +48,7 @@ formDict = {
         'minCount': minCountForm,
         'sourceSel': sourceSelForm
 }
+
 
 
 class request(object):
@@ -89,9 +91,10 @@ class request(object):
                         break
             logging.debug("source sites: %s" % source_sites.keys())
             if not source_sites:
-                return render.request(formDict)
+                return render.error("No sources selected", '/request')
             result = al.full_results(source_sites, query)
-            return render.results(result, query)
+            return render.results(result, query, source_sites.keys(),
+                                  '/request')
 
 # For serving using any wsgi server
 wsgiapp = web.application(urls, globals()).wsgifunc()
