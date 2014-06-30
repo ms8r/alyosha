@@ -37,6 +37,10 @@ class EmptySearchResult(Exception):
     pass
 
 
+class ResultParsingError(Exception):
+    pass
+
+
 class SiteResults(object):
     """
     Container for search results.
@@ -60,11 +64,14 @@ class SiteResults(object):
     _search_url = 'https://www.google.com/search?q=site:{0}%20{1}'
 
     # XPath strings to grab search results
-    _prefix = '//div[@id="ires"]//li[@class="g"]'
-    # `_xp_title` points a tags containing titles as text content and urls as
-    # `href` attributes: need multiple xp's to collect news items at top of
+    # NOTE: the `div[@class-"srg"] part excludes news items at the top of the
+    # page (not stable)
+    _prefix = '//div[@id="ires"]//div[@class="srg"]//li[@class="g"]'
+    # `_xp_title` points to `a` tags containing titles as text content and urls
+    # as `href` attributes: need multiple xp's to collect news items at top of
     # results and regular results
-    _xp_title = [_prefix + '//span[@class="tl"]/a[1]',
+    _xp_title = [
+                 # _prefix + '//span[@class="tl"]/a[1]',
                  _prefix + '//h3[@class="r"]/a[1]'
     ]
     _xp_link = _prefix + '//cite'
@@ -111,7 +118,8 @@ class SiteResults(object):
         urls = [a.attrib['href'] for a in atags]
         links = [c.text_content() for c in parsed.xpath(SiteResults._xp_link)]
         descs = [c.text_content() for c in parsed.xpath(SiteResults._xp_desc)]
-        assert len(titles) == len(links) == len(descs) == len(urls)
+        if not len(titles) == len(links) == len(descs) == len(urls):
+            raise ResultParsingError
 
         self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
                     for t, a, d, u in zip(titles, links, descs, urls)]
@@ -135,25 +143,22 @@ def full_results(source_sites, query):
             res[s] = SiteResults(source_sites[s], query)
         except EmptySearchResult:
             continue
+        except ResultParsingError:
+            logging.warning("ResultParsingError on site %s with query %s"
+                            % (s, query))
+            continue
 
     return res
 
 
-def build_search_string(ref_url, min_count=0, stop_words=None,
-                        late_kills=None):
+def build_search_string(ref_url, stop_words=None, late_kills=None):
     """
-    Analyses the page at ref_url to returns a list of search terms, sorted in
-    order of decreasing "importance". Multiple word phrases will occur before
-    single words.
+    Analyses the page at ref_url to construct a string of search terms.
 
     Arguments:
     ----------
     ref_url : str
         Web page from which search terms are to be extracted
-    min_count : int
-        Minimum count for words and phrases to make it into the search string.
-        If `min_count == 0` the threshold will be calculated based on the
-        article length (excluding stop words).
     stop_words : sequence or set
         List or set with common words to be excluded from search string.
         `stop_list` will be applied *before* any multiple word phrases are
@@ -162,15 +167,16 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
         Like `stop_words` but the words in `late_kills` will only be
         eliminated from the search string *after* multiple word phrases have
         been constructed. This you can have a word like 'report' appear in
-        the seach string as part of a multiple word phrase ("OECD Report on
+        the search string as part of a multiple word phrase ("OECD Report on
         Public Health") but not as a single word (which would have almost
         zero selectivity for a news article.
 
     Returns:
     --------
-    Tuple `(phrase_search_str, word_search_str)` with `phrase_search_str`
-    containing multiple word phrases enclosed in '"' and `word_search_str`
-    containing single words.
+    Tuple wih three lists `(phrases, words, pruned_words`). `phrases` will
+    contain multiple word phrases, each enclosed in '"'.  `words` will contain
+    single words, some which may be duplicated as part of `phrases`.
+    `pruned_words` is like `words` but without any overlaps with `phrases`.
     """
 
     if not late_kills:
@@ -183,18 +189,19 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
     wcount = len(article.wlist)
     logging.debug("built %d word list for article \"%s\"" % (wcount,
                                                             article.title))
-    if min_count == 0:
-        min_count = int(round(wcount/100.))
-        logging.debug("min_count calculated to %d" % min_count)
-
     # get word/phrase counts:
+    min_count = max(2, int(round(wcount/100.)))
     search_term_list = []
     for i in range(len(article.wlist)):
-        terms = _phrase_counts(article.wlist, i + 1, min_count)
+        # frequency threshold for phrases only:
+        m = min_count if i > 0 else 0
+        terms = _phrase_counts(article.wlist, i + 1, m)
         if not terms:
             break
         search_term_list.append([t[0] for t in terms])
 
+    # keep full word search list:
+    full_words = [w for w in search_term_list[0] if w not in late_kills]
     # eliminate redundancies:
     pruned_list = []
     for short_terms, long_terms in zip(search_term_list[:-1],
@@ -204,22 +211,18 @@ def build_search_string(ref_url, min_count=0, stop_words=None,
         pruned_list.append(short_terms)
     pruned_list.append(search_term_list[-1])
 
-    phrase_search_str = ""
+    phrases = []
     # iterating in reverse order to put multiple word phrases first
     first_element = len(pruned_list) - 1
     for i, terms in enumerate(reversed(pruned_list)):
         # kill weak single words and enclose multiple word phrases in double
         # quotes:
         if i == first_element:
-            word_search_str = ' '.join([t for t in terms
-                                        if t not in late_kills])
+            pruned_words = [t for t in terms if t not in late_kills]
         else:
-            tlist = ['"%s"' % t for t in terms]
-            sep = ' ' if phrase_search_str else ''
-            phrase_search_str = "%s%s%s" % (phrase_search_str, sep,
-                                            ' '.join(tlist))
+            phrases += ['"%s"' % t for t in terms]
 
-    return (phrase_search_str, word_search_str)
+    return (phrases, full_words, pruned_words)
 
 
 def _phrase_counts(word_list, phrase_length=2, min_count=0):
@@ -237,8 +240,7 @@ def _phrase_counts(word_list, phrase_length=2, min_count=0):
         cols.append(word_list[i:])
     phrases = ([' '.join(c) for c in zip(*cols)])
     top_list = Counter(phrases).most_common()
-    if min_count > 0:
-        top_list = [t for t in top_list if t[1] >= min_count]
+    top_list = [t for t in top_list if t[1] >= min_count]
     return top_list
 
 

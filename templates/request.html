@@ -9,16 +9,10 @@ $if not formDict['url'].valid:
     <p class="error">Try again, AmeriCAN</p>
 $:formDict['url'].render()
 
-<h2 class="formheader">Select search scope</h2>
-$if not formDict['searchScope'].valid:
+<h2 class="formheader">Check for multiple word phrases to be included in search string</h2>
+$if not formDict['searchPhrases'].valid:
     <p class="error">Try again, AmeriCAN</p>
-$:formDict['searchScope'].render()
-
-<h2 class="formheader">Select the minimum frequency for a word or phrase to be included into the search string</h2>
-<p class="inputhint"><em>Note: '0' will cause this value to be automagically calculated based on the length of the article.</em></p>
-$if not formDict['minCount'].valid:
-    <p class="error">Try again, AmeriCAN</p>
-$:formDict['minCount'].render()
+$:formDict['searchPhrases'].render()
 
 <h2 class="formheader">Select sources to search</h2>
 $if not formDict['sourceSel'].valid:
