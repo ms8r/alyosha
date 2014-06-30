@@ -71,9 +71,12 @@ class request(object):
             phrases, full_words, pruned_words = al.build_search_string(
                     ref_url, stop_words=REF.stop_words,
                     late_kills=REF.late_kills)
-            logging.debug("search phrases=%s" % phrases)
-            logging.debug("search words full=%s" % full_words)
-            logging.debug("search words pruned=%s" % pruned_words)
+            logging.debug("search phrases=%s" %
+                    phrases[min(10, len(phrases))])
+            logging.debug("search words full=%s" %
+                    full_words[min(10, len(full_words))])
+            logging.debug("search words pruned=%s" %
+                    pruned_words[min(10, len(pruned_words))])
 
             # build search string:
             if phrases and 'Search phrases' in form_data.keys():
