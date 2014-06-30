@@ -9,7 +9,7 @@ from alyosha import reference as REF
 # Configure the logger
 logging.basicConfig(level=logging.DEBUG)
 
-render = web.template.render('templates/')
+render = web.template.render('templates/', base='layout')
 
 urls = (
     '/', 'index',
