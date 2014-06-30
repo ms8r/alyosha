@@ -78,11 +78,11 @@ class request(object):
                     ref_url, stop_words=REF.stop_words,
                     late_kills=REF.late_kills)
             logging.debug("search phrases=%s" %
-                    phrases[min(10, len(phrases))])
+                    phrases[:min(10, len(phrases))])
             logging.debug("search words full=%s" %
-                    full_words[min(10, len(full_words))])
+                    full_words[:min(10, len(full_words))])
             logging.debug("search words pruned=%s" %
-                    pruned_words[min(10, len(pruned_words))])
+                    pruned_words[:min(10, len(pruned_words))])
 
             # build search string:
             if phrases and 'Search phrases' in form_data.keys():
