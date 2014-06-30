@@ -51,6 +51,10 @@ formDict = {
         'sourceSel': sourceSelForm
 }
 
+class index(Object):
+
+    def GET(self):
+        return render.index('/request')
 
 class request(object):
 
