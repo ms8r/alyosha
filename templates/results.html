@@ -15,8 +15,8 @@ $if result:
     <p>on</p>
     <p><em>$', '.join(source_list)</em></p>
     <p><a href="$back_link">&lt;&lt; Go back</a></p>
+    <div=source-results>
     $for source in result:
-        <div=source-results>
         <h2>$source</h2>
         $code:
             num_source_res = len(result[source].res)
@@ -32,9 +32,11 @@ $if result:
             <h4>$r['link']</h4>
             <p>$r['desc']</p>
 
-        </div>
     <p><a href="$back_link">&lt;&lt; Go back</a></p>
+    </div>
     
 $else:
+    <div=source-results>
     <p>Nothing to show!</p> 
     <p><a href="$back_link">&lt;&lt; Go back</a></p>
+    </div>
