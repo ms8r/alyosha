@@ -41,6 +41,10 @@ class ResultParsingError(Exception):
     pass
 
 
+class ArticleExtractionError(Exception):
+    pass
+
+
 class WebArticle(object):
     """
     Will retrieve aN URL, extract the main article and expose word/phrase lists
@@ -48,26 +52,43 @@ class WebArticle(object):
 
     Attributes:
     -----------
-        url : str
-            URL from which instance was constructed
-        title : str
-            Title of article as provided by Goose().extract()
-        text : str
-            Cleaned text of article
-        wcount : int
-            Number of words in cleaned text
-        top_words : list
-            Unique list of words, sorted by descending frequency
-        top_phrases : list
-            Unique list of multi-word phrases, sorted first by length of
-            phrase, then by frequency
-        phrase_overlaps : list
-            List of single words in top_words that also appear as part of a
-            phrase in top_phrases
-        pruned_top_words : list
-            top_words - phrase_overlaps, with original order of top_words
-            retained
+    url : str
+        URL from which instance was constructed
+    title : str
+        Title of article as provided by Goose().extract()
+    text : str
+        Cleaned text of article
+    wcount : int
+        Number of words in cleaned text
+    top_words : list
+        Unique list of words, sorted by descending frequency
+    top_phrases : list
+        Unique list of multi-word phrases, sorted first by length of
+        phrase, then by frequency
+    phrase_overlaps : list
+        List of single words in top_words that also appear as part of a
+        phrase in top_phrases
+    pruned_top_words : list
+        top_words - phrase_overlaps, with original order of top_words
+        retained
+
+    Mehtods:
+    --------
+    search_string :
+        Returns search string based on article content.
+    match_score :
+        Compares content to another WebArticle and provides a score tuple
+        indicating how well the content matches.
+
+    Raises ArticleExtractionError if goose fails to identify any article text
+    in the page referenced by `url`.
     """
+
+    # Weight given to phrases when calculating combined match score. The number
+    # of common phrases will be multiplied this weight and added to nominator
+    # and denominator of the word match score.
+    phrase_match_score_weight = 4
+
     def __init__(self, ref_url, stop_words=None, late_kills=None):
         """
         Arguments:
@@ -95,6 +116,9 @@ class WebArticle(object):
         article = Goose().extract(raw_html=result.text)
         self.title = article.title
         self.text = article.cleaned_text
+        if not self.text:
+            logging.debug("could not extract article from %s" % ref_url)
+            raise ArticleExtractionError
 
         def build_wlist(raw_text, stop_words):
             raw_text = unicodedata.normalize(
@@ -107,7 +131,7 @@ class WebArticle(object):
             raw_text = re.sub(ur'n\'t', '', raw_text)
             wlist = re.findall(ur'\w+', raw_text)
             fwcount = len(wlist)
-            wlist = [w for w in wlist if w not in stop_words]
+            wlist = [w.lower() for w in wlist if w not in stop_words]
             return wlist, fwcount
 
         wlist, self.wcount = build_wlist(self.text, stop_words)
@@ -168,9 +192,86 @@ class WebArticle(object):
                 # instead
                 # pruned_words = [t for t in terms if t not in late_kills]
             else:
-                phrases += ['"%s"' % t for t in terms]
+                phrases += [t for t in terms]
 
         self.top_phrases = phrases
+
+    def search_string(self, use_phrases=True, num_terms=7):
+        """
+        Returns a search string based on the articles top words and phrases.
+
+        Arguments:
+        ----------
+        use_phrases : boolean
+            If `False` only single words will be used in search string.
+        num_terms : int
+            Total number of terms (single words and phrases) to be includes in
+            search string.
+
+        Returns:
+        --------
+        A string with space separated search terms. Multiple word phrases will
+        be enclosed in '"'.
+        """
+        if use_phrases:
+            num_phrases = min(num_terms, len(self.top_phrases))
+            result = ' '.join(['"%s"' % p
+                    for p in self.top_phrases[:num_phrases]])
+            top_words = self.pruned_top_words
+        else:
+            num_phrases = 0
+            result = ""
+            top_words = self.top_words
+        num_words = min(num_terms - num_phrases, len(top_words))
+        if num_words > 0:
+            result += ' ' + ' '.join(top_words[:num_words])
+
+        return result
+
+    def match_score(self, other, num_words=20):
+        """
+        Determines the intersection of top words between self and other as a
+        percentage of the number of top words considered.
+
+        Arguments:
+        ----------
+        other : WebArticle object
+            Article to compare self with.
+        num_words : int
+            Total number of single words to be includes in comparison.  Phrases
+            will always be included at thir full length.
+
+        Returns:
+        --------
+        Tuple (phrase overlap percentage, word overlap percentage, combined
+        score) with all three values being between 0 and 1 inclusive.
+        """
+        p_base = max(len(self.top_phrases), len(other.top_phrases))
+        if p_base > 0:
+            p_intersect = set(self.top_phrases).intersection(
+                    set(other.top_phrases))
+            p_overlap = len(p_intersect) / float(p_base)
+        else:
+            p_intersect = set()
+            p_overlap = 0.
+
+        w_base = min(num_words, max(len(self.top_words), len(other.top_words)))
+        w_min = min(num_words, len(self.top_words), len(other.top_words))
+        if w_base > 0:
+            w_intersect = set(self.top_words[:w_min]).intersection(
+                    set(other.top_words[:w_min]))
+            wi_len = len(w_intersect)
+            pi_len = len(p_intersect)
+            w_overlap = wi_len / float(w_base)
+            m = WebArticle.phrase_match_score_weight
+            combined_score = (wi_len + m * pi_len) / float(w_base +
+                                                            m * pi_len)
+        else:
+            w_intersect = set()
+            w_overlap = 0.
+            combined_score = p_overlap
+
+        return (p_overlap, w_overlap, combined_score)
 
     @property
     def phrase_overlaps(self):
@@ -207,7 +308,10 @@ class SiteResults(object):
     query : str
         Search query that was passed to constructor
 
-    Will raise `EmptySearchResult` if no results can be found.
+    Raises:
+    -------
+    `EmptySearchResult` if no results can be found.
+    `ResultParsingError` if results could not be parsed successfully.
     """
 
     _search_url = 'https://www.google.com/search?q=site:{0}%20{1}'
