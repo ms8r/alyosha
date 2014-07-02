@@ -3,7 +3,7 @@ Alyosha - A counter recommendation engine for news feeds
 
 *Note: This project is its very early stages...*
 
-There has been some discussion in the media on the filtering algorithms behind news feeds increasing polarization in a society. As a recent blog comment put it [here](http://mathbabe.org/2014/06/30/thanks-for-a-great-case-study-facebook/#comments): 
+There has been some discussion in the media about how the filtering algorithms behind news feeds may increase polarization in a society. As a recent [comment](http://mathbabe.org/2014/06/30/thanks-for-a-great-case-study-facebook/#comments) on [mathbabe.org](http://mathbabe.org) put it: 
 
 > There was a time when there were only three major news sources available to
 > people on a daily basis and the news they provided was governed by a
@@ -12,9 +12,9 @@ There has been some discussion in the media on the filtering algorithms behind n
 > where one’s world view is constantly reinforced making it harder for
 > open-mindedness to prevail.
 
-The idea behind Alyosha is - on any given subject - to provide you with an recommendation to a news article or editorial piece that you normally wouldn't see or look at, but that's at least substantial and relevant enough to have a debate about. Kind of *"If you like this you'll probably won't like this but it's still worth reading"*.
+The idea behind Alyosha is - on any given subject - to provide you with a recommendation to a news article or editorial piece that you normally wouldn't see or look at, but that's at least substantial and relevant enough to have a debate about. Kind of *"If you like this you'll probably won't like this but it's still worth reading"*.
 
-The idea was partially inspired by [Philip Tetlock's](http://en.wikipedia.org/wiki/Philip_E._Tetlock) study on the accuracy of experts' predictions, distinguishing between *foxes* and *hedgehogs* (the following quote taken from [The Long Now](http://longnow.org/seminars/02007/jan/26/why-foxes-are-better-forecasters-than-hedgehogs/)):
+The idea was partially inspired by [Philip Tetlock's](http://en.wikipedia.org/wiki/Philip_E._Tetlock) 2005 study on the accuracy of experts' predictions, distinguishing between *foxes* and *hedgehogs* (the following quote taken from [The Long Now](http://longnow.org/seminars/02007/jan/26/why-foxes-are-better-forecasters-than-hedgehogs/)):
 
 > The ancient Greek warrior poet Archilochus coined the phrase: “The fox knows
 > many things; the hedgehog one great thing.” The idea was later expanded by
