@@ -1,26 +1,31 @@
 source_sites = {
-    'WSJ': ('wsj.com', -0.4),
-    'The Guardian': ('theguardian.com', 0.4),
-    'The Economist': ('economist.com', -0.4),
-    'Der Spiegel': ('spiegel.de', 0.2),
-    'Huffington Post': ('huffingtonpost.com', 0.4),
-    'Lawfare': ('lawfareblog.com', -0.4),
-    'Brookings': ('brookings.edu', 0.2),
-    'Slate Magazine': ('slate.com', 0.4),
-    'Washington Post': ('washingtonpost.com', 0.2),
-    'New York Times': ('nytimes.com', 0.2),
-    'National Review': ('nationalreview.com', -0.7),
-    'Townhall': ('townhall.com', -2.0),
-    'The Weekly Standard': ('weeklystandard.com', -0.7),
-    'Daily Kos': ('dailykos.com', 0.7),
-    'The Nation': ('thenation.com', 2.0),
-    'FactCheck': ('factcheck.org', 0.0),
-    'Vote Smart': ('votesmart.org', 0.0),
-    'EconLib': ('econlib.org', -0.4),
-    'Hoover Institution': ('hoover.org', -0.4),
-    'Financial Times': ('ft.com', -0.4),
-    'FiveThirtyEight': ('fivethirtyeight.com', 0.0),
-    'Christian Science Monitor': ('csmonitor.com', -0.2)
+        # right outfield:
+        'Townhall': ('townhall.com', -0.9),
+        'The Weekly Standard': ('weeklystandard.com', -0.7),
+        'National Review': ('nationalreview.com', -0.6),
+        'EconLib': ('econlib.org', -0.6),
+        # right center:
+        'Hoover Institution': ('hoover.org', -0.4),
+        'Financial Times': ('ft.com', -0.3),
+        'WSJ': ('wsj.com', -0.3),
+        'The Economist': ('economist.com', -0.3),
+        'Lawfare': ('lawfareblog.com', -0.2),
+        'Christian Science Monitor': ('csmonitor.com', -0.1),
+        'FiveThirtyEight': ('fivethirtyeight.com', -0.1),
+        # left center:
+        'FactCheck': ('factcheck.org', 0.1),
+        'The Guardian': ('theguardian.com', 0.4),
+        'Der Spiegel': ('spiegel.de', 0.2),
+        'Brookings': ('brookings.edu', 0.2),
+        'The Atlantic': ('theatlantic', 0.2),
+        'Slate Magazine': ('slate.com', 0.4),
+        'Washington Post': ('washingtonpost.com', 0.2),
+        'New York Times': ('nytimes.com', 0.2),
+        # left outfield:
+        'Mother Jones': ('motherjones.com'),
+        'Huffington Post': ('huffingtonpost.com', 0.6),
+        'Daily Kos': ('dailykos.com', 0.7),
+        'The Nation': ('thenation.com', 0.9),
 }
 
 # user agents tuple taken from howdoi:

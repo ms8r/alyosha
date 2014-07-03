@@ -18,6 +18,10 @@ try:
     from urllib import getproxies
 except ImportError:
     from urllib.request import getproxies
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 
 
 # get_proxies shamrequestelessly copied from howdoi:
@@ -42,6 +46,10 @@ class ResultParsingError(Exception):
 
 
 class ArticleExtractionError(Exception):
+    pass
+
+
+class ArticleFormatError(Exception):
     pass
 
 
@@ -80,13 +88,19 @@ class WebArticle(object):
         Compares content to another WebArticle and provides a score tuple
         indicating how well the content matches.
 
-    Raises ArticleExtractionError if goose fails to identify any article text
-    in the page referenced by `url`.
+    Raises:
+    -------
+    ArticleFormatError
+        If path component of `url` points to non-html resource.
+    ArticleExtractionError
+        If goose fails to identify any article text in the page referenced by
+        `url`.
     """
 
     # Weight given to phrases when calculating combined match score. The number
-    # of common phrases will be multiplied this weight and added to nominator
-    # and denominator of the word match score.
+    # of common phrases will be multiplied by this weight and added to
+    # nominator and denominator of the word match score. Not hugely scientific,
+    # but seems to do the trick...
     phrase_match_score_weight = 4
 
     def __init__(self, ref_url, stop_words=None, late_kills=None):
@@ -107,6 +121,11 @@ class WebArticle(object):
             ("OECD Report on Public Health") but not as a single word (which
             would have almost zero selectivity for a news article.
         """
+        # check if url points to non-html:
+        p_url = urlparse(ref_url)
+        if p_url[2].endswith(('.pdf', '.jpg', '.gif', '.mp3', '.mp4')):
+            raise ArticleFormatError
+
         if not late_kills:
             late_kills = []
 
@@ -196,7 +215,7 @@ class WebArticle(object):
 
         self.top_phrases = phrases
 
-    def search_string(self, use_phrases=True, num_terms=7):
+    def search_string(self, use_phrases=True, num_terms=6):
         """
         Returns a search string based on the articles top words and phrases.
 
@@ -402,3 +421,68 @@ def full_results(source_sites, query):
             continue
 
     return res
+
+
+def rank_matches(wa, sources):
+    """
+    Returns a list of dicts with ranked search results for matches against
+    `article`.
+
+    Arguments:
+    ---------
+    wa : WebArticle object
+        Reference artticle against which to match results.
+        WebArticle.match_score() will be used to evaluate content match.
+    sources : dict
+        Mapping of source names to urls
+    """
+    # minimum word count for matching article to make it into ranking:
+    wc_threshold = 400
+
+    query = wa.search_string()
+    logging.debug("searching %s for '%s'", ' ,'.join(sources.keys()), query)
+    res = {}
+    for src, url in sources.iteritems():
+        try:
+            res[src] = SiteResults(url, query)
+        except EmptySearchResult:
+            logging.debug("empty search result for %s", src)
+            continue
+        except ResultParsingError:
+            logging.debug("parsing error for %s", src)
+        logging.debug("%s: found %d matches", url, res[src].resnum)
+
+    # for now we just look at top match for each site:
+    matches = []
+    for src, sr in res.iteritems():
+        url = sr.res[0]['url']
+        title = sr.res[0]['title']
+        if _duplicate_url(wa.url, url):
+            logging.debug("Skipping %s, same as reference article", url)
+            continue
+        try:
+            wb = WebArticle(url, REF.stop_words, REF.late_kills)
+        except (ArticleExtractionError, ArticleFormatError):
+            logging.debug("%s: failed to extract article '%s'",
+                    src, title)
+            continue
+        if wb.wcount < wc_threshold:
+            logging.debug("%s: discarding '%s', only %d words",
+                          src, title, wb.wcount)
+            continue
+        __, __, match_score = wa.match_score(wb)
+        matches.append({'src': src, 'wc': wb.wcount, 'score': match_score,
+                'title': title, 'url': url, 'link': sr.res[0]['link'],
+                'desc': sr.res[0]['desc']})
+
+    return sorted(matches, key=lambda k: k['score'], reverse=True)
+
+
+def _duplicate_url(url1, url2):
+    p_url1 = urlparse(url1)
+    p_url2 = urlparse(url2)
+    # consider same if netloc and path match:
+    if p_url1[1:3] == p_url2[1:3]:
+        return True
+    else:
+        return False
