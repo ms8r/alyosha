@@ -14,6 +14,7 @@ render = web.template.render('templates/', base='layout')
 urls = (
     '/', 'index',
     '/request', 'request',
+    '/results', 'results',
     '/sources', 'sources',
     '/error', 'error'
 )
@@ -113,6 +114,13 @@ class request(object):
             result = al.full_results(source_sites, query)
             return render.results(result, query, source_sites.keys(),
                                   '/request')
+
+class results(object):
+
+    def GET(self):
+        return render.results(None, "some dummy query",
+                REF.source_sites.keys(), '/request')
+
 
 # For serving using any wsgi server
 wsgiapp = web.application(urls, globals()).wsgifunc()

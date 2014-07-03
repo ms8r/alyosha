@@ -8,30 +8,39 @@ $code:
     # max. number of results to show per source:
     max_res = 3
 
-$if result:
+$# if result:
+$if True:
     <h1>...you may also want to look at some of these</h1>
-    <p>Searched for:</p>
-    <p><em>$query</em></p>
-    <p>on</p>
-    <p><em>$', '.join(source_list)</em></p>
-    <p><a href="$back_link">&lt;&lt; Go back</a></p>
-    <div=source-results>
-    $for source in result:
-        <h2>$source</h2>
-        $code:
-            num_source_res = len(result[source].res)
-            if num_source_res < max_res:
-                num_res = num_source_res
-            else:
-                num_res = max_res
+    <div id="results-top-box">
+        <p>Searched for:</p>
+        <p><em>$query</em></p>
+        <p>on</p>
+        <p><em>$', '.join(source_list)</em></p>
+        <p><a href="$back_link">&lt;&lt; Go back</a></p>
+    </div>
 
-        <p><em>Google reports $result[source].resnum hits, showing top $num_res</em></p>
+    <div id="results-main_wrapper">
+    <div id="results-left" class="results-column">
+        <h2>On the left...</h2>
+        <h3>This would be a headline</h3>
+        <h4>This would be the link</h4>
+        <p> and this would be text...</p>
+    </div>
+    <div id="results-center" class="results-column">
+        <h2>...in the center...</h2>
+        <h3>This would be a headline</h3>
+        <h4>This would be the link</h4>
+        <p> and this would be text...</p>
+    </div>
+    <div id="results-right" class="results-column">
+        <h2>...and on the right</h2>
+        <h3>This would be a headline</h3>
+        <h4>This would be the link</h4>
+        <p> and this would be text...</p>
+    </div>
+    </div>
 
-        $for r in result[source].res[:num_res]:
-            <h3><a href="$r['url']">$r['title']</a></h3>
-            <h4>$r['link']</h4>
-            <p>$r['desc']</p>
-
+    <div id=results-bottom-box">
     <p><a href="$back_link">&lt;&lt; Go back</a></p>
     </div>
     

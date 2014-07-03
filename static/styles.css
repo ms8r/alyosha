@@ -1,20 +1,65 @@
 /*===GENERAL PRESENTATION===*/
 /*===Body Presentation and Margins===*/
 
-#page-wrapper {
-  min-height: 100%;
-  width: 960px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-
 body
 {
     font-size: 87.5%;
     line-height: 1.5;
     word-wrap: break-word;
     text-align: left;
+}
+
+#page-wrapper {
+  min-height: 100%;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+* {
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+
+/* column layour for results page */
+#results-main-wrapper {
+	clear: both;
+	display: inline;/* IE double margin fix. Feel free to move this to your IE specific stylesheets. */
+	float: left;
+	padding: 0 0px 0 0px;
+	position: relative;
+	width: 100%;
+}
+
+#results-left {
+    float: left;
+    width: 32%;
+    margin: 0 0px 0 0px;
+    background-color: rgba(0,0,170,0.2);
+}
+
+#results-right {
+    float: right;
+    width: 32%;
+    margin: 0 0px 0 0px;
+    background-color: rgba(170,0,0,0.2);
+}
+
+#results-center {
+    float: left;
+    width: 32%;
+    margin: 0 2% 0 2%;
+    background-color: rgba(0,170,0,0.2);
+}
+
+#results-left, #results-center, #results-right {
+    padding: 10px;
+    border-radius: 15px;
+}
+
+#results-bottom-box {
+    clear: both;
 }
 
 
@@ -70,24 +115,34 @@ font-weight: normal;
 
 /* headings for search results */
 
-div.source-results h3
+.results-column h2
+{
+font-family:'Sans';
+text-indent: 0;
+text-align: left;
+font-size: 1.2em;
+font-weight: bold;
+margin: 10px 0 0 0;
+}
+
+.results-column h3
 {
 font-family:'Sans';
 text-indent: 0;
 text-align: left;
 font-size: 1.2em;
 font-weight: normal;
-margin: 10px 0 0 0;
+margin: 5px 0 0 0;
 }
 
-div.source-results h4
+.results-column h4
 {
 font-family:'Sans';
 text-indent: 0;
 text-align: left;
 font-size: 1em;
 font-weight: normal;
-color: #00ff00;
+color: #1111aa;
 margin: 0 0 0 0;
 }
 
@@ -167,12 +222,21 @@ div.banner-box {
     font-size: 3em;
     line-height: 1;
     font-family: sans-serif;
-    font-weight: normal:
+    font-weight: normal;
 }
 
 #site-name a {
 }
 
+.blockquote {
+    border-left: 4px solid #DDDDDD;
+    color: #777777;
+    padding: 0 15px;
+    max-width: 720px;
+}
+.blockquote p {
+    margin: 15px 0;
+}
 
 
 div.pagebanner a {
