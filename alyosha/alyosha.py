@@ -45,11 +45,23 @@ class ResultParsingError(Exception):
     pass
 
 
-class ArticleExtractionError(Exception):
+class WebArticleError(Exception):
     pass
 
 
-class ArticleFormatError(Exception):
+class ArticleExtractionError(WebArticleError):
+    pass
+
+
+class ArticleFormatError(WebArticleError):
+    pass
+
+
+class InvalidUrlError(WebArticleError):
+    pass
+
+
+class PageRetrievalError(WebArticleError):
     pass
 
 
@@ -90,11 +102,17 @@ class WebArticle(object):
 
     Raises:
     -------
+    The following exceptions all inherit from WebArticleError:
+
     ArticleFormatError
         If path component of `url` points to non-html resource.
     ArticleExtractionError
         If goose fails to identify any article text in the page referenced by
         `url`.
+    ArticleRetrievalError
+        Raised if
+            - the web page cannot be retrieved by requests (e.g. timeout)
+            - the GET request returns a non-OK status code
     """
 
     # Weight given to phrases when calculating combined match score. The number
@@ -121,23 +139,31 @@ class WebArticle(object):
             ("OECD Report on Public Health") but not as a single word (which
             would have almost zero selectivity for a news article.
         """
+        if not valid_url(ref_url):
+            raise InvalidUrlError(ref_url)
         # check if url points to non-html:
         p_url = urlparse(ref_url)
         if p_url[2].endswith(('.pdf', '.jpg', '.gif', '.mp3', '.mp4')):
-            raise ArticleFormatError
+            raise ArticleFormatError(p_url[2])
 
         if not late_kills:
             late_kills = []
 
         self.url = ref_url
-        result = requests.get(ref_url, headers={'User-Agent':
-                random.choice(REF.user_agents)}, proxies=_get_proxies())
+        try:
+            result = requests.get(ref_url, headers={'User-Agent':
+                    random.choice(REF.user_agents)}, proxies=_get_proxies())
+        except requests.exceptions.RequestException:
+            raise PageRetrievalError
+        if not result.status_code == requests.codes.ok:
+            raise PageRetrievalError
+
         article = Goose().extract(raw_html=result.text)
         self.title = article.title
         self.text = article.cleaned_text
         if not self.text:
             logging.debug("could not extract article from %s" % ref_url)
-            raise ArticleExtractionError
+            raise ArticleExtractionError(ref_url)
 
         def build_wlist(raw_text, stop_words):
             raw_text = unicodedata.normalize(
@@ -150,7 +176,7 @@ class WebArticle(object):
             raw_text = re.sub(ur'n\'t', '', raw_text)
             wlist = re.findall(ur'\w+', raw_text)
             fwcount = len(wlist)
-            wlist = [w.lower() for w in wlist if w not in stop_words]
+            wlist = [w.lower() for w in wlist if w.lower() not in stop_words]
             return wlist, fwcount
 
         wlist, self.wcount = build_wlist(self.text, stop_words)
@@ -436,7 +462,7 @@ def rank_matches(wa, sources):
             continue
         try:
             wb = WebArticle(url, REF.stop_words, REF.late_kills)
-        except (ArticleExtractionError, ArticleFormatError):
+        except WebArticleError:
             logging.debug("%s: failed to extract article '%s'",
                     src, title)
             continue
@@ -461,6 +487,7 @@ def duplicate_urls(url1, url2):
     else:
         return False
 
+
 def valid_url(url):
     """
     Returns None if no valid url can be derived from url, else a (structurally)
@@ -474,5 +501,3 @@ def valid_url(url):
     if not p_url[0]:
         url = 'http://' + url
     return url
-
-

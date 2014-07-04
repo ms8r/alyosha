@@ -68,19 +68,23 @@ class request(object):
                 return render.request(formDict)
 
         form_data = web.input()
-        ref_url = al.valid_url(form_data['URL'])
-        if not ref_url:
-            return render.error("Invalid URL: %s" % form_data['URL'])
-        logging.debug("ref_url=%s" % ref_url)
+        logging.debug("ref_url=%s" % form_data['URL'])
 
         try:
-            wa = al.WebArticle(ref_url, REF.stop_words, REF.late_kills)
+            wa = al.WebArticle(form_data['URL'], REF.stop_words,
+                    REF.late_kills)
             logging.debug("article '%s' (%d words) at url='%s': query='%s'",
                     wa.title, wa.wcount, wa.url, wa.search_string())
         except al.ArticleFormatError:
-            return render.error("Non-html resource at %s" % ref_url)
+            return render.error("Non-html resource at %s" % form_data['URL'])
         except al.ArticleExtractionError:
-            return render.error("Cannot extract article from %s" % ref_url)
+            return render.error("Cannot extract article from %s" %
+                    form_data['URL'])
+        except al.InvalidUrlError:
+            return render.error("Invalid URL: %s" % form_data['URL'])
+        except al.PageRetrievalError:
+            return render.error("Could not retrieve URL: %s" %
+                    form_data['URL'])
 
         results = {}
         for cat, rng in src_cats.iteritems():
