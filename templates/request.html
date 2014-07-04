@@ -13,14 +13,4 @@ $if not formDict['url'].valid:
     <p class="error">Try again, AmeriCAN</p>
 $:formDict['url'].render()
 
-<h2 class="formheader">Check for multiple word phrases to be included in search string</h2>
-$if not formDict['searchPhrases'].valid:
-    <p class="error">Try again, AmeriCAN</p>
-$:formDict['searchPhrases'].render()
-
-<h2 class="formheader">Select sources to search</h2>
-$if not formDict['sourceSel'].valid:
-    <p class="error">Try again, AmeriCAN</p>
-$:formDict['sourceSel'].render()
-
 <input type="submit" /> </form>

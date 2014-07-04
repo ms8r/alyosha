@@ -398,31 +398,6 @@ class SiteResults(object):
         logging.debug("stored %d results in res dict" % len(titles))
 
 
-def full_results(source_sites, query):
-    """
-    Returns a dict with SiteResults objects mapped to their respective sources.
-
-    Arguments:
-    ---------
-    source_sites : dict
-        Mapping of source names to urls
-    query : str
-        Seach query string
-    """
-    res = {}
-    for s in source_sites:
-        try:
-            res[s] = SiteResults(source_sites[s], query)
-        except EmptySearchResult:
-            continue
-        except ResultParsingError:
-            logging.warning("ResultParsingError on site %s with query %s"
-                            % (s, query))
-            continue
-
-    return res
-
-
 def rank_matches(wa, sources):
     """
     Returns a list of dicts with ranked search results for matches against
@@ -438,7 +413,6 @@ def rank_matches(wa, sources):
     """
     # minimum word count for matching article to make it into ranking:
     wc_threshold = 400
-
     query = wa.search_string()
     logging.debug("searching %s for '%s'", ' ,'.join(sources.keys()), query)
     res = {}
@@ -457,7 +431,7 @@ def rank_matches(wa, sources):
     for src, sr in res.iteritems():
         url = sr.res[0]['url']
         title = sr.res[0]['title']
-        if _duplicate_url(wa.url, url):
+        if duplicate_urls(wa.url, url):
             logging.debug("Skipping %s, same as reference article", url)
             continue
         try:
@@ -478,7 +452,7 @@ def rank_matches(wa, sources):
     return sorted(matches, key=lambda k: k['score'], reverse=True)
 
 
-def _duplicate_url(url1, url2):
+def duplicate_urls(url1, url2):
     p_url1 = urlparse(url1)
     p_url2 = urlparse(url2)
     # consider same if netloc and path match:
@@ -486,3 +460,19 @@ def _duplicate_url(url1, url2):
         return True
     else:
         return False
+
+def valid_url(url):
+    """
+    Returns None if no valid url can be derived from url, else a (structurally)
+    valid url.
+    """
+    p_url = urlparse(url)
+    # must at least have netloc:
+    if not p_url[1]:
+        return None
+    # check if scheme is present:
+    if not p_url[0]:
+        url = 'http://' + url
+    return url
+
+

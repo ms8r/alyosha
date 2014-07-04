@@ -1,42 +1,49 @@
-$def with (result, query, source_list, back_link)
+$def with (wa, results, back_link)
 
 $var title: Foxes, not Hedgehogs - Results
 
 $var cssfiles: static/styles.css
 
 $code:
-    # max. number of results to show per source:
+    # max. number of results to show per category:
     max_res = 3
 
-$# if result:
-$if True:
+$def cat_res(cr, max_res):
+    $if not cr:
+        <p>No results found in this category</p>
+    $else:
+        $code:
+            m = min(max_res, len(cr))
+
+        $for r in cr[:m]:
+            $code:
+                score = "%.2f" % r['score']
+
+            <h3><a href="$r['url']">$r['title']</a></h2>
+            <h4>$r['link']</h3>
+            <p class="match-score">$r['wc'] words, score: $score</p>
+            <p class="res-description">$r['desc']</p>
+
+
+$if results:
     <h1>...you may also want to look at some of these</h1>
     <div id="results-top-box">
-        <p>Searched for:</p>
-        <p><em>$query</em></p>
-        <p>on</p>
-        <p><em>$', '.join(source_list)</em></p>
+        <p>Based on the article <em><a href="$wa.url">$wa.title</a></em>, a search for <em>'$wa.search_string()'</em> yields the following results:</p>
         <p><a href="$back_link">&lt;&lt; Go back</a></p>
     </div>
 
     <div id="results-main_wrapper">
     <div id="results-left" class="results-column">
         <h2>On the left...</h2>
-        <h3>This would be a headline</h3>
-        <h4>This would be the link</h4>
-        <p> and this would be text...</p>
+        $:cat_res(results['left'], max_res)
     </div>
     <div id="results-center" class="results-column">
         <h2>...in the center...</h2>
-        <h3>This would be a headline</h3>
-        <h4>This would be the link</h4>
-        <p> and this would be text...</p>
+        $:cat_res(results['center'], max_res)
     </div>
     <div id="results-right" class="results-column">
         <h2>...and on the right</h2>
-        <h3>This would be a headline</h3>
-        <h4>This would be the link</h4>
-        <p> and this would be text...</p>
+        $:cat_res(results['right'], max_res)
     </div>
     </div>
 

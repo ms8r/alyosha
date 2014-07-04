@@ -1,4 +1,3 @@
-import urllib
 import web
 from web import form
 import logging
@@ -40,16 +39,15 @@ sourceSelForm = form.Form(
         form.Checkbox('Right field'))
 
 # source grouping: intervals below are open on the left
-sourceLeaningGroups = {
-        'Left field': (0.5, 1.0),
-        'Center': (-0.5, 0.5),
-        'Right field': (-1.0, -0.5)
-}
 
 formDict = {
         'url': urlForm,
-        'searchPhrases': searchPhrasesForm,
-        'sourceSel': sourceSelForm
+}
+
+src_cats = {
+        'right': (-1.0, -0.5),
+        'center': (-0.5, 0.5),
+        'left': (0.5, 1.0)
 }
 
 
@@ -61,9 +59,6 @@ class index(object):
 
 class request(object):
 
-    max_phrases = 2
-    max_words = 5
-
     def GET(self):
         return render.request(formDict)
 
@@ -71,54 +66,36 @@ class request(object):
         for form in formDict.values():
             if not form.validates():
                 return render.request(formDict)
-        else:
-            form_data = web.input()
-            ref_url = form_data['URL']
-            logging.debug("ref_url=%s" % urllib.unquote(ref_url))
-            phrases, full_words, pruned_words = al.build_search_string(
-                    ref_url, stop_words=REF.stop_words,
-                    late_kills=REF.late_kills)
-            logging.debug("search phrases=%s" %
-                    phrases[:min(10, len(phrases))])
-            logging.debug("search words full=%s" %
-                    full_words[:min(10, len(full_words))])
-            logging.debug("search words pruned=%s" %
-                    pruned_words[:min(10, len(pruned_words))])
 
-            # build search string:
-            if phrases and 'Search phrases' in form_data.keys():
-                n = min(request.max_phrases, len(phrases))
-                query = ' '.join(phrases[:n])
-                m = min(request.max_words - n, len(pruned_words))
-                sep = ' ' if query and m else ''
-                query += sep + ' '.join(pruned_words[:m])
-            else:
-                m = min(request.max_words, len(full_words))
-                query = ' '.join(full_words[:m])
-            logging.debug("query: %s" % query)
+        form_data = web.input()
+        ref_url = al.valid_url(form_data['URL'])
+        if not ref_url:
+            return render.error("Invalid URL: %s" % form_data['URL'])
+        logging.debug("ref_url=%s" % ref_url)
 
-            # build sources list:
-            s_ranges = [v for (k, v) in sourceLeaningGroups.iteritems()
-                        if k in form_data.keys()]
-            logging.debug("source ranges: %s" % s_ranges)
-            # compile all sources to included in dict:
-            source_sites = {}
-            for (k, v) in REF.source_sites.iteritems():
-                for r in s_ranges:
-                    if r[0] <= v[1] < r[1]:
-                        source_sites[k] = v[0]
-                        break
-            logging.debug("source sites: %s" % source_sites.keys())
-            if not source_sites:
-                return render.error("No sources selected", '/request')
-            result = al.full_results(source_sites, query)
-            return render.results(result, query, source_sites.keys(),
-                                  '/request')
+        try:
+            wa = al.WebArticle(ref_url, REF.stop_words, REF.late_kills)
+            logging.debug("article '%s' (%d words) at url='%s': query='%s'",
+                    wa.title, wa.wcount, wa.url, wa.search_string())
+        except al.ArticleFormatError:
+            return render.error("Non-html resource at %s" % ref_url)
+        except al.ArticleExtractionError:
+            return render.error("Cannot extract article from %s" % ref_url)
+
+        results = {}
+        for cat, rng in src_cats.iteritems():
+            sources = dict((src, v[0]) for (src, v) in
+                    REF.source_sites.iteritems() if rng[0] <= v[1] < rng[1])
+            results[cat] = al.rank_matches(wa, sources)
+            logging.debug("%s: %d ranked results", cat, len(results[cat]))
+
+        return render.results(wa, results, '/request')
+
 
 class results(object):
 
     def GET(self):
-        return render.results(None, "some dummy query",
+        return render.results(None, None,
                 REF.source_sites.keys(), '/request')
 
 

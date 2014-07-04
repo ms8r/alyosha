@@ -117,36 +117,54 @@ font-weight: normal;
 
 .results-column h2
 {
-font-family:'Sans';
-text-indent: 0;
-text-align: left;
-font-size: 1.2em;
-font-weight: bold;
-margin: 10px 0 0 0;
+    font-family:'Sans';
+    text-indent: 0;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 10px 0 0 0;
+}
+
+#results-left h2
+{
+    text-align: left;
+}
+
+#results-center h2
+{
+    text-align: center;
+}
+
+#results-right h2
+{
+    text-align: right;
 }
 
 .results-column h3
 {
-font-family:'Sans';
-text-indent: 0;
-text-align: left;
-font-size: 1.2em;
-font-weight: normal;
-margin: 5px 0 0 0;
+    font-family:'Sans';
+    text-indent: 0;
+    text-align: left;
+    font-size: 1.2em;
+    font-weight: normal;
+    margin: 5px 0 0 0;
 }
 
 .results-column h4
 {
-font-family:'Sans';
-text-indent: 0;
-text-align: left;
-font-size: 1em;
-font-weight: normal;
-color: #1111aa;
-margin: 0 0 0 0;
+    font-family:'Sans';
+    text-indent: 0;
+    text-align: left;
+    font-size: 1em;
+    font-weight: normal;
+    color: #1111aa;
+    margin: 0 0 0 0;
 }
 
-/*===Paragraph Elements===*/
+.match-score p
+{
+    font-style: italic;
+}
+    /*===Paragraph Elements===*/
 
 p
 {
