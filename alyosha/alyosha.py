@@ -6,6 +6,7 @@ import re
 import logging
 from collections import Counter
 import unicodedata
+from datetime import date, timedelta
 
 import reference as REF
 
@@ -109,7 +110,7 @@ class WebArticle(object):
     ArticleExtractionError
         If goose fails to identify any article text in the page referenced by
         `url`.
-    ArticleRetrievalError
+    PageRetrievalError
         Raised if
             - the web page cannot be retrieved by requests (e.g. timeout)
             - the GET request returns a non-OK status code
@@ -336,7 +337,7 @@ class WebArticle(object):
         return [w for w in self.top_words if not w in excludes]
 
 
-class SiteResults(object):
+class GoogleSerp(object):
     """
     Container for search results.
 
@@ -348,18 +349,14 @@ class SiteResults(object):
         will always be a complete valid url.
     resnum : int
         Number of results as returned by Google
-    site : str
-        `site` argument that was passed to constructor
-    query : str
-        Search query that was passed to constructor
-
-    Raises:
-    -------
-    `EmptySearchResult` if no results can be found.
-    `ResultParsingError` if results could not be parsed successfully.
+    search_terms : str
+        Search terms that were passed to constructor
+    search_ops : dict
+        Dictionary with the search operators that were passed to the
+        constructor.
     """
 
-    _search_url = 'https://www.google.com/search?q=site:{0}%20{1}'
+    _search_url = 'https://www.google.com/search?q={0}'
 
     # XPath strings to grab search results
     # NOTE: the `div[@class-"srg"] part excludes news items at the top of the
@@ -378,7 +375,109 @@ class SiteResults(object):
 
     _resnum_re = re.compile(r'\D*([\d.,]+) result')
 
-    def __init__(self, site, query):
+    def __init__(self, search_terms, *search_ops, **search_kwds):
+        """
+        Arguments:
+        ----------
+        search_terms : str
+            Terms to be searched; will be url quoted before appending to url
+        allintext: boolean
+            If True, `search_terms` will be prefixed by `allintext:`
+        search_ops : list of tuples
+            Search operators with associated values to be passed to google;
+            examples: `site`, `link`, `daterenge`, `-ext` (for filetype
+            exclusion, e.g. `-ext:pdf`). `search_ops` can be used for
+            oeprators that can appear in multiple instances (e.g. `-ext`).
+        search_kwds : dict
+            Search operators as key: value pairs. If `'allintext' in
+            search_kwds` and `search_kwds['allintext'] == True`, the search
+            terms will be prefixed by 'alltintext:'
+            See also:
+             - https://developers.google.com/search-appliance/documentation/614/xml_reference
+             - https://support.google.com/websearch/answer/136861
+
+        Raises:
+        -------
+        `EmptySearchResult` if no results can be found.
+        `ResultParsingError` if results could not be parsed successfully.
+        `PageRetrievalError` if
+            - the web page cannot be retrieved by requests (e.g. timeout)
+            - the GET request returns a non-OK status code
+        """
+        # construct search string:
+        if 'allintext' in search_kwds:
+            if search_kwds['allintext']:
+                search_terms = "allintext:%s" % search_terms
+            del search_kwds['allintext']
+        ops = (["%s:%s" % (s[0], s[1]) for s in search_ops]
+                + ["%s:%s" % (k, v) for (k, v) in search_kwds.iteritems()])
+        query = ' '.join([search_terms] + ops)
+
+        self.search_terms = search_terms
+        self.search_ops = search_ops
+        self.search_kwds = search_kwds
+        logging.debug("searching for '%s'" % query)
+
+        try:
+            result = requests.get(GoogleSerp._search_url.format(
+                    url_quote(query)), headers={'User-Agent':
+                    random.choice(REF.user_agents)}, proxies=_get_proxies())
+        except requests.exceptions.RequestException:
+            raise PageRetrievalError
+        if not result.status_code == requests.codes.ok:
+            raise PageRetrievalError
+        parsed = html.fromstring(result.text)
+
+        try:
+            s = parsed.xpath(GoogleSerp._xp_resnum)[0].text_content()
+            m = GoogleSerp._resnum_re.match(s) if s else None
+            self.resnum = int(m.group(1).replace(',', '').replace('.', ''))
+        except IndexError:
+            self.resnum = None
+        logging.debug("google reports %s results" % self.resnum)
+
+        atags = []
+        for xp in GoogleSerp._xp_title:
+            atags += parsed.xpath(xp)
+        if not atags:
+            logging.info("could not find any search results, "
+                          "raising EmptySearchResult")
+            raise EmptySearchResult
+
+        titles = [a.text_content() for a in atags]
+        urls = [a.attrib['href'] for a in atags]
+        links = [c.text_content() for c in parsed.xpath(GoogleSerp._xp_link)]
+        descs = [c.text_content() for c in parsed.xpath(GoogleSerp._xp_desc)]
+        if not len(titles) == len(links) == len(descs) == len(urls):
+            raise ResultParsingError
+
+        self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
+                    for t, a, d, u in zip(titles, links, descs, urls)]
+        logging.debug("stored %d results in res dict" % len(titles))
+
+
+class SiteResults(GoogleSerp):
+    """
+    Wrapper around GoogleSerp for site specific results
+
+    Attributes:
+    -----------
+    res : List of dicts
+        Keys are 'title', 'link', 'description', 'url'; res['link'] may miss
+        the scheme (e.g. 'http://') and contain ellipses (...) whereas 'url'
+        will always be a complete valid url.
+    resnum : int
+        Number of results as returned by Google
+    site : str
+        `site` argument that was passed to constructor
+    query : str
+        Search query that was passed to constructor
+    back_days: int
+        Numbder days to search into past
+    """
+    exclude_formats = ['pdf', 'doc', 'mp3', 'mp4']
+
+    def __init__(self, site, query, back_days=None):
         """
         Arguments:
         ----------
@@ -386,42 +485,25 @@ class SiteResults(object):
             Site to which search is to be restricted (e.g. 'nytimes.com')
         query : str
             Query ro be submitted; will be url quoted before appending to url
+        back_days : int
+            If specified a `daterange' operator will be appended to the search
+            string, restricting the search results to documents that have been
+            modified no longer than `back_days` days ago. Note that this will
+            also exclude any documents which are lacking date information.
         """
+        search_ops = [('-ext', x) for x in SiteResults.exclude_formats]
+        search_ops.append(('site', site))
+        if back_days:
+            now = date.today()
+            then = now - timedelta(days=back_days)
+            search_ops.append(('daterange', then.isoformat() + '..' +
+                              now.isoformat()))
+
+        super(SiteResults, self).__init__(query, *search_ops, allintext=True)
+
         self.site = site
         self.query = query
-        logging.debug("searching for '%s' on %s" % (query, site))
-
-        result = requests.get(SiteResults._search_url.format(site,
-                url_quote(query)), headers={'User-Agent':
-                random.choice(REF.user_agents)}, proxies=_get_proxies())
-        parsed = html.fromstring(result.text)
-
-        try:
-            s = parsed.xpath(SiteResults._xp_resnum)[0].text_content()
-            m = SiteResults._resnum_re.match(s) if s else None
-            self.resnum = int(m.group(1).replace(',', '').replace('.', ''))
-        except IndexError:
-            self.resnum = None
-        logging.debug("google reports %s results" % self.resnum)
-
-        atags = []
-        for xp in SiteResults._xp_title:
-            atags += parsed.xpath(xp)
-        if not atags:
-            logging.debug("could not find any search results, "
-                          "raising EmptySearchResult")
-            raise EmptySearchResult
-
-        titles = [a.text_content() for a in atags]
-        urls = [a.attrib['href'] for a in atags]
-        links = [c.text_content() for c in parsed.xpath(SiteResults._xp_link)]
-        descs = [c.text_content() for c in parsed.xpath(SiteResults._xp_desc)]
-        if not len(titles) == len(links) == len(descs) == len(urls):
-            raise ResultParsingError
-
-        self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
-                    for t, a, d, u in zip(titles, links, descs, urls)]
-        logging.debug("stored %d results in res dict" % len(titles))
+        self.back_days = back_days
 
 
 def rank_matches(wa, sources):
@@ -439,12 +521,14 @@ def rank_matches(wa, sources):
     """
     # minimum word count for matching article to make it into ranking:
     wc_threshold = 400
+    back_days = 90
+
     query = wa.search_string()
     logging.debug("searching %s for '%s'", ' ,'.join(sources.keys()), query)
     res = {}
     for src, url in sources.iteritems():
         try:
-            res[src] = SiteResults(url, query)
+            res[src] = SiteResults(url, query, back_days=back_days)
         except EmptySearchResult:
             logging.debug("empty search result for %s", src)
             continue
