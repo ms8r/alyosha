@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# Syncs contents of static directory with namaniatsea.org
+#
+rsync -av static/* msr@namaniatsea.org:public_html/alyosha/static/
