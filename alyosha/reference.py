@@ -85,12 +85,13 @@ stop_words = frozenset([
     'yourself', 'yourselves',
     # added items based on early trial and error:
     'says', 'said', 'reported', 'mr', 'mrs', 'percent', 'including', 'end',
-    'likely', 'unlikely'
+    'likely', 'unlikely', 'wrote'
 ])
 
 # additional stop words that will only be culled from final search string, i.e.
 # these words are still available to construct "search phrases"
 late_kills = frozenset([
-    'report', 'reported', 'reporting', 'reporting', 'face', 'facing',
-    'read', 'reads', 'different', 'think', 'thought', 'people', 'big'
+    'report', 'reported', 'reporting', 'reporting', 'face', 'facing', 'like',
+    'read', 'reads', 'different', 'think', 'thought', 'people', 'big', 'new',
+    'issues', 'issue'
 ])

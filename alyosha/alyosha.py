@@ -7,6 +7,7 @@ import logging
 from collections import Counter
 import unicodedata
 from datetime import date, timedelta
+from math import sqrt
 
 import reference as REF
 
@@ -120,7 +121,7 @@ class WebArticle(object):
     # of common phrases will be multiplied by this weight and added to
     # nominator and denominator of the word match score. Not hugely scientific,
     # but seems to do the trick...
-    phrase_match_score_weight = 4
+    _phrase_match_score_weight = 4
 
     def __init__(self, ref_url, stop_words=None, late_kills=None):
         """
@@ -203,7 +204,7 @@ class WebArticle(object):
             return top_list
 
         # get word/phrase counts:
-        min_count = max(2, int(round(len(wlist)/100.)))
+        min_count = max(2, int(round(sqrt(len(wlist)/100.))))
         search_term_list = []
         for i in range(len(wlist)):
             # frequency threshold for phrases only:
@@ -309,7 +310,7 @@ class WebArticle(object):
             wi_len = len(w_intersect)
             pi_len = len(p_intersect)
             w_overlap = wi_len / float(w_base)
-            m = WebArticle.phrase_match_score_weight
+            m = WebArticle._phrase_match_score_weight
             combined_score = (wi_len + m * pi_len) / float(w_base +
                                                             m * pi_len)
         else:
