@@ -411,7 +411,7 @@ class GoogleSerp(object):
             del search_kwds['allintext']
         ops = (["%s:%s" % (s[0], s[1]) for s in search_ops]
                 + ["%s:%s" % (k, v) for (k, v) in search_kwds.iteritems()])
-        query = ' '.join([search_terms] + ops)
+        query = ' '.join([search_terms] + ops).lstrip()
 
         self.search_terms = search_terms
         self.search_ops = search_ops

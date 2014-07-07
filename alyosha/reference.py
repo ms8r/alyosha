@@ -1,6 +1,7 @@
 source_sites = {
         # right outfield:
         'Townhall': ('townhall.com', -0.9),
+        'FoxNews': ('foxnews.com', -0.7),
         'The Weekly Standard': ('weeklystandard.com', -0.7),
         'National Review': ('nationalreview.com', -0.6),
         'EconLib': ('econlib.org', -0.6),
@@ -17,12 +18,13 @@ source_sites = {
         'The Guardian': ('theguardian.com', 0.4),
         'Der Spiegel': ('spiegel.de', 0.2),
         'Brookings': ('brookings.edu', 0.2),
-        'The Atlantic': ('theatlantic', 0.2),
+        'The Atlantic': ('theatlantic.com', 0.2),
         'Slate Magazine': ('slate.com', 0.4),
         'Washington Post': ('washingtonpost.com', 0.2),
         'New York Times': ('nytimes.com', 0.2),
         # left outfield:
-        'Mother Jones': ('motherjones.com'),
+        'MNBC': ('msnbc.com', 0.6),
+        'Mother Jones': ('motherjones.com', 0.7),
         'Huffington Post': ('huffingtonpost.com', 0.6),
         'Daily Kos': ('dailykos.com', 0.7),
         'The Nation': ('thenation.com', 0.9),
