@@ -179,7 +179,8 @@ class WebArticle(object):
             raw_text = re.sub(ur'[\u2019]+', u'\'', raw_text)
             raw_text = re.sub(ur'\'s', '', raw_text)
             raw_text = re.sub(ur'n\'t', '', raw_text)
-            return [w.lower() for w in re.findall(ur'\w+', raw_text)]
+            result = [w.lower() for w in re.findall(ur'\w+', raw_text)]
+            return [w for w in result if not w in ['m', 've', 't', 'd']]
 
         self.wlist = build_wlist(self.text)
         self.wcount = len(self.wlist)
@@ -309,8 +310,9 @@ class WebArticle(object):
         # TODO: calculate as dot product between word vectors
         p_base = max(len(self.top_phrases), len(other.top_phrases))
         if p_base > 0:
-            p_intersect = set(self.top_phrases).intersection(
-                    set(other.top_phrases))
+            p1 = [p[0] for p in self.top_phrases]
+            p_intersect = set([p[0] for p in self.top_phrases]).intersection(
+                    set([p[0] for p in other.top_phrases]))
             p_overlap = len(p_intersect) / float(p_base)
         else:
             p_intersect = set()
@@ -319,8 +321,8 @@ class WebArticle(object):
         w_base = min(num_words, max(len(self.top_words), len(other.top_words)))
         w_min = min(num_words, len(self.top_words), len(other.top_words))
         if w_base > 0:
-            w_intersect = set(self.top_words[:w_min]).intersection(
-                    set(other.top_words[:w_min]))
+            w_intersect = set([w for w in self.top_words[:w_min]]).intersection(
+                    set([w for w in other.top_words[:w_min]]))
             wi_len = len(w_intersect)
             pi_len = len(p_intersect)
             w_overlap = wi_len / float(w_base)
@@ -556,6 +558,7 @@ def rank_matches(wa, sources):
         logging.debug("%s: found %d matches", url, res[src].resnum)
 
     # for now we just look at top match for each site:
+    # TODO: change to allow looking at top n matches
     matches = []
     for src, sr in res.iteritems():
         url = sr.res[0]['url']
