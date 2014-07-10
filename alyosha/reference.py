@@ -93,5 +93,5 @@ stop_words = frozenset([
 late_kills = frozenset([
     'report', 'reported', 'reporting', 'reporting', 'face', 'facing', 'like',
     'read', 'reads', 'different', 'think', 'thought', 'people', 'big', 'new',
-    'issues', 'issue', 'instance', 'just', 'need'
+    'issues', 'issue', 'instance', 'just', 'need', 'best', 'better', 'worst'
 ])

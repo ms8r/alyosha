@@ -7,9 +7,11 @@ import logging
 from collections import Counter
 import unicodedata
 from datetime import date, timedelta
-from math import sqrt
+import nltk
 
 import reference as REF
+
+nltk.data.path.append('./nltk_data/')
 
 try:
     from urllib.parse import quote as url_quote
@@ -26,7 +28,7 @@ except ImportError:
     from urlparse import urlparse
 
 
-# get_proxies shamrequestelessly copied from howdoi:
+# get_proxies shamelessly copied from howdoi:
 def _get_proxies():
     proxies = getproxies()
     filtered_proxies = {}
@@ -118,7 +120,8 @@ class WebArticle(object):
             - the web page cannot be retrieved by requests (e.g. timeout)
             - the GET request returns a non-OK status code
     """
-
+    # file extensions to be excluded (will raise InvalidUrlError):
+    exclude_formats = ['pdf', 'doc', 'mp3', 'mp4']
     # Weight given to phrases when calculating combined match score. The number
     # of common phrases will be multiplied by this weight and added to
     # nominator and denominator of the word match score. Not hugely scientific,
@@ -138,16 +141,16 @@ class WebArticle(object):
         late_kills : sequence or set
             Like `stop_words` but the words in `late_kills` will only be
             eliminated from the search string *after* multiple word phrases
-            have been constructed. This you can have a word like 'report'
+            have been constructed. Thus you can have a word like 'report'
             appear in the search string as part of a multiple word phrase
             ("OECD Report on Public Health") but not as a single word (which
-            would have almost zero selectivity for a news article.
+            would have almost zero selectivity for a news article).
         """
         if not valid_url(ref_url):
             raise InvalidUrlError(ref_url)
         # check if url points to non-html:
         p_url = urlparse(ref_url)
-        if p_url[2].endswith(('.pdf', '.jpg', '.gif', '.mp3', '.mp4')):
+        if p_url[2].endswith(tuple(WebArticle.exclude_formats)):
             raise ArticleFormatError(p_url[2])
 
         if not late_kills:
@@ -180,11 +183,9 @@ class WebArticle(object):
 
         self.wlist = build_wlist(self.text)
         self.wcount = len(self.wlist)
-        no_stop_wlist = [w for w in self.wlist if w not in stop_words]
-
-
         logging.debug("built %d word list for article \"%s\"" %
                 (self.wcount, self.title))
+        no_stop_wlist = [w for w in self.wlist if w not in stop_words]
 
         def phrase_counts(word_list, phrase_length=2, min_count=0):
             """
@@ -192,41 +193,50 @@ class WebArticle(object):
             checks for repeated occurence of multiple word phrases (e.g.
             'snowden files').  Returns a list of tuples (phrase, count), sorted
             by count in descending order.  `phrase_length` indicates how many
-            words whould be in a phrase.  If `min_count` > 0 only phrases that
-            occur at least `min_count` times will be returned.
+            words should be in a phrase. Only phrases with at least `min_count`
+            occurences in `word_list` will be included in the result.
             """
             assert 1 <= phrase_length <= len(word_list)
             cols = []
             for i in range(phrase_length):
                 cols.append(word_list[i:])
             phrases = ([' '.join(c) for c in zip(*cols)])
-            top_list = Counter(phrases).most_common()
-            top_list = [t for t in top_list if t[1] >= min_count]
-            return top_list
+            result = Counter(phrases).most_common()
+            return [r for r in result if r[1] >= min_count]
 
         # get word/phrase counts:
-        min_count = max(2, int(round(sqrt(len(no_stop_wlist)/100.))))
-        search_term_list = []
-        for i in range(len(no_stop_wlist)):
-            # frequency threshold for phrases only:
-            m = min_count if i > 0 else 0
-            terms = phrase_counts(no_stop_wlist, i + 1, m)
+        wnl = nltk.WordNetLemmatizer()
+        lemma_count = {}
+        for w, c in Counter(no_stop_wlist).most_common():
+            lemma = wnl.lemmatize(w)
+            lemma_count[lemma] = c + lemma_count.setdefault(lemma, 0)
+        lemmatized = [(w, c) for (w, c) in lemma_count.iteritems()]
+        lemmatized.sort(key=lambda t: t[1], reverse=True)
+        self.top_words = [w for w in lemmatized if w[0] not in late_kills]
+        # TODO: establish count threshold for phrases as average of top n word
+        # counts:
+        n = min(10, len(self.top_words))
+        min_count = (sum([c[1] for c in self.top_words[:n]]) / float(n)
+                if n > 0 else float('nan'))
+        min_count = max(3, int(round(min_count / 2.5)))
+        search_term_list = [lemmatized]
+        for i in range(1, len(no_stop_wlist)):
+            terms = phrase_counts(no_stop_wlist, i + 1, min_count=min_count)
             if not terms:
                 break
             # only keep phrases that also appear as such in pre-stop-word-kill
             # text:
-            search_term_list.append([t[0] for t in terms
-                                     if t[0] in ' '.join(self.wlist)])
+            terms = [t for t in terms if t[0] in ' '.join(self.wlist)]
+            if terms:
+                search_term_list.append(terms)
 
-        # keep full word search list:
-        self.top_words = [w for w in search_term_list[0]
-                          if w not in late_kills]
-        # eliminate redundancies:
+        # eliminate redundancies (word/shorter phrase contained in longer
+        # phrase):
         pruned_list = []
         for short_terms, long_terms in zip(search_term_list[:-1],
                                            search_term_list[1:]):
-            short_terms = [t for t in short_terms
-                           if not t in ' '.join(long_terms)]
+            short_terms = [s for s in short_terms if not s[0] in
+                           ' '.join([t[0] for t in long_terms])]
             pruned_list.append(short_terms)
         pruned_list.append(search_term_list[-1])
 
@@ -235,38 +245,36 @@ class WebArticle(object):
         # NOTE: reversing no longer required
         first_element = len(pruned_list) - 1
         for i, terms in enumerate(reversed(pruned_list)):
-            # kill weak single words and enclose multiple word phrases in
-            # double quotes:
             if i == first_element:
                 pass
-                # pruned_words no longer stored - use pruned_top_words property
-                # instead
-                # pruned_words = [t for t in terms if t not in late_kills]
             else:
                 phrases += [t for t in terms]
 
         self.top_phrases = phrases
 
-    def search_string(self, use_phrases=True, num_terms=6):
+    def search_string(self, num_terms=6, use_phrases=True, force_phrases=True):
         """
         Returns a search string based on the articles top words and phrases.
 
         Arguments:
         ----------
-        use_phrases : boolean
-            If `False` only single words will be used in search string.
         num_terms : int
             Total number of terms (single words and phrases) to be includes in
             search string.
+        use_phrases : boolean
+            If `False` only single words will be used in search string.
+        force_phrases : boolean
+            If `True`, phrases will be included in quotes.
 
         Returns:
         --------
         A string with space separated search terms. Multiple word phrases will
-        be enclosed in '"'.
+        be enclosed in '"' if `force_phrases was set to `True`.
         """
         if use_phrases:
             num_phrases = min(num_terms, len(self.top_phrases))
-            result = ' '.join(['"%s"' % p
+            encl = '"' if force_phrases else ''
+            result = ' '.join(['%s%s%s' % (encl, p[0], encl)
                     for p in self.top_phrases[:num_phrases]])
             top_words = self.pruned_top_words
         else:
@@ -275,7 +283,8 @@ class WebArticle(object):
             top_words = self.top_words
         num_words = min(num_terms - num_phrases, len(top_words))
         if num_words > 0:
-            result += ' ' + ' '.join(top_words[:num_words])
+            words = ' '.join([t[0] for t in top_words[:num_words]])
+            result = (result + ' ' + words).lstrip()
 
         return result
 
@@ -297,6 +306,7 @@ class WebArticle(object):
         Tuple (phrase overlap percentage, word overlap percentage, combined
         score) with all three values being between 0 and 1 inclusive.
         """
+        # TODO: calculate as dot product between word vectors
         p_base = max(len(self.top_phrases), len(other.top_phrases))
         if p_base > 0:
             p_intersect = set(self.top_phrases).intersection(
@@ -330,7 +340,8 @@ class WebArticle(object):
         Provides a list of the words in self.top_words that are also part of a
         multi-word phrase in self.top_phrases
         """
-        return [w for w in self.top_words if w in ' '.join(self.top_phrases)]
+        phrases = [p[0] for p in self.top_phrases]
+        return [w for w in self.top_words if w[0] in ' '.join(phrases)]
 
     @property
     def pruned_top_words(self):
@@ -366,6 +377,8 @@ class GoogleSerp(object):
     # XPath strings to grab search results
     # NOTE: the `div[@class-"srg"] part excludes news items at the top of the
     # page (not stable)
+    # NOTE: news items not an issue if request is sent with additional search
+    # parameter (e.g. 'allintext')
     _prefix = '//div[@id="ires"]//div[@class="srg"]//li[@class="g"]'
     # `_xp_title` points to `a` tags containing titles as text content and urls
     # as `href` attributes: need multiple xp's to collect news items at top of
@@ -377,6 +390,7 @@ class GoogleSerp(object):
     _xp_link = _prefix + '//cite'
     _xp_desc = _prefix + '//div[@class="s"]//span[@class="st"]'
     _xp_resnum = '//div[@id="resultStats"]'
+    # TODO: catch single search result cases and scrape differently
 
     _resnum_re = re.compile(r'\D*([\d.,]+) result')
 
@@ -480,7 +494,7 @@ class SiteResults(GoogleSerp):
     back_days: int
         Numbder days to search into past
     """
-    exclude_formats = ['pdf', 'doc', 'mp3', 'mp4']
+    exclude_formats = WebArticle.exclude_formats
 
     def __init__(self, site, query, back_days=None):
         """
