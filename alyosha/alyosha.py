@@ -80,6 +80,8 @@ class WebArticle(object):
         Title of article as provided by Goose().extract()
     text : str
         Cleaned text of article
+    wlist : list
+        `text` as list of lower case strings without punctuation marks.
     wcount : int
         Number of words in cleaned text
     top_words : list
@@ -167,23 +169,22 @@ class WebArticle(object):
             logging.debug("could not extract article from %s" % ref_url)
             raise ArticleExtractionError(ref_url)
 
-        def build_wlist(raw_text, stop_words):
+        def build_wlist(raw_text):
             raw_text = unicodedata.normalize(
                     'NFKC', raw_text)
-            if not stop_words:
-                stop_words = []
             # strip punctuation to build word list excluding stop_list
             raw_text = re.sub(ur'[\u2019]+', u'\'', raw_text)
             raw_text = re.sub(ur'\'s', '', raw_text)
             raw_text = re.sub(ur'n\'t', '', raw_text)
-            wlist = re.findall(ur'\w+', raw_text)
-            fwcount = len(wlist)
-            wlist = [w.lower() for w in wlist if w.lower() not in stop_words]
-            return wlist, fwcount
+            return [w.lower() for w in re.findall(ur'\w+', raw_text)]
 
-        wlist, self.wcount = build_wlist(self.text, stop_words)
+        self.wlist = build_wlist(self.text)
+        self.wcount = len(self.wlist)
+        no_stop_wlist = [w for w in self.wlist if w not in stop_words]
+
+
         logging.debug("built %d word list for article \"%s\"" %
-                (len(wlist), self.title))
+                (self.wcount, self.title))
 
         def phrase_counts(word_list, phrase_length=2, min_count=0):
             """
@@ -204,15 +205,18 @@ class WebArticle(object):
             return top_list
 
         # get word/phrase counts:
-        min_count = max(2, int(round(sqrt(len(wlist)/100.))))
+        min_count = max(2, int(round(sqrt(len(no_stop_wlist)/100.))))
         search_term_list = []
-        for i in range(len(wlist)):
+        for i in range(len(no_stop_wlist)):
             # frequency threshold for phrases only:
             m = min_count if i > 0 else 0
-            terms = phrase_counts(wlist, i + 1, m)
+            terms = phrase_counts(no_stop_wlist, i + 1, m)
             if not terms:
                 break
-            search_term_list.append([t[0] for t in terms])
+            # only keep phrases that also appear as such in pre-stop-word-kill
+            # text:
+            search_term_list.append([t[0] for t in terms
+                                     if t[0] in ' '.join(self.wlist)])
 
         # keep full word search list:
         self.top_words = [w for w in search_term_list[0]
