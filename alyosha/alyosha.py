@@ -553,10 +553,15 @@ def rank_matches(wa, sources):
         try:
             res[src] = SiteResults(url, query, back_days=back_days)
         except EmptySearchResult:
-            logging.debug("empty search result for %s", src)
+            logging.debug("SiteResult: empty search result for %s", src)
             continue
         except ResultParsingError:
-            logging.debug("parsing error for %s", src)
+            logging.debug("SiteResult: parsing error for %s", src)
+            continue
+        except PageRetrievalError:
+            logging.debug("SiteResult: PageRetrievalError for %s", src)
+            continue
+
         logging.debug("%s: found %d matches", url, res[src].resnum)
 
     # for now we just look at top match for each site:
