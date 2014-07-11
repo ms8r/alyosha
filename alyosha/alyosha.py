@@ -180,7 +180,9 @@ class WebArticle(object):
             raw_text = re.sub(ur'\'s', '', raw_text)
             raw_text = re.sub(ur'n\'t', '', raw_text)
             result = [w.lower() for w in re.findall(ur'\w+', raw_text)]
-            return [w for w in result if not w in ['m', 've', 't', 'd']]
+            short_num = re.compile(r'0*\d$')
+            return [w for w in result if not w in ['m', 've', 't', 'd'] and
+                    not short_num.match(w)]
 
         self.wlist = build_wlist(self.text)
         self.wcount = len(self.wlist)
