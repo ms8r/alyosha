@@ -221,6 +221,7 @@ class WebArticle(object):
         n = min(10, len(self.top_words))
         min_count = (sum([c[1] for c in self.top_words[:n]]) / float(n)
                 if n > 0 else float('nan'))
+        # NOTE: the 2.5 are a trial-and-error smudge factor
         min_count = max(3, int(round(min_count / 2.5)))
         search_term_list = [lemmatized]
         for i in range(1, len(no_stop_wlist)):
@@ -312,7 +313,6 @@ class WebArticle(object):
         # TODO: calculate as dot product between word vectors
         p_base = max(len(self.top_phrases), len(other.top_phrases))
         if p_base > 0:
-            p1 = [p[0] for p in self.top_phrases]
             p_intersect = set([p[0] for p in self.top_phrases]).intersection(
                     set([p[0] for p in other.top_phrases]))
             p_overlap = len(p_intersect) / float(p_base)
@@ -330,7 +330,7 @@ class WebArticle(object):
             w_overlap = wi_len / float(w_base)
             m = WebArticle._phrase_match_score_weight
             combined_score = (wi_len + m * pi_len) / float(w_base +
-                                                            m * pi_len)
+                                                           m * pi_len)
         else:
             w_intersect = set()
             w_overlap = 0.
@@ -371,9 +371,10 @@ class GoogleSerp(object):
         Number of results as returned by Google
     search_terms : str
         Search terms that were passed to constructor
-    search_ops : dict
-        Dictionary with the search operators that were passed to the
-        constructor.
+    search_ops : list of tuples
+        Search operator/vaue pairs that were passed to the constructor.
+    search_kwds : dict
+        Search operator/value pairs that were passed to the constructor.
     """
 
     _search_url = 'https://www.google.com/search?q={0}'
@@ -405,8 +406,6 @@ class GoogleSerp(object):
         ----------
         search_terms : str
             Terms to be searched; will be url quoted before appending to url
-        allintext: boolean
-            If True, `search_terms` will be prefixed by `allintext:`
         search_ops : list of tuples
             Search operators with associated values to be passed to google;
             examples: `site`, `link`, `daterenge`, `-ext` (for filetype
@@ -486,51 +485,55 @@ class SiteResults(GoogleSerp):
 
     Attributes:
     -----------
-    res : List of dicts
-        Keys are 'title', 'link', 'description', 'url'; res['link'] may miss
-        the scheme (e.g. 'http://') and contain ellipses (...) whereas 'url'
-        will always be a complete valid url.
-    resnum : int
-        Number of results as returned by Google
+    Inherited from `GoogleSerp` (see doc string): `res`, `resnum`,
+    `search_ops`, `search_kwds`, `search_terms`
+
     site : str
         `site` argument that was passed to constructor
-    query : str
-        Search query that was passed to constructor
     back_days: int
-        Numbder days to search into past
+        Number of days to search into past
     """
     exclude_formats = WebArticle.exclude_formats
 
-    def __init__(self, site, query, back_days=None):
+    def __init__(self, site, search_terms, back_days=None, *search_ops, **search_kwds):
         """
         Arguments:
         ----------
         site : str
             Site to which search is to be restricted (e.g. 'nytimes.com')
-        query : str
+        search_terms : str
             Query ro be submitted; will be url quoted before appending to url
         back_days : int
             If specified a `daterange' operator will be appended to the search
             string, restricting the search results to documents that have been
             modified no longer than `back_days` days ago. Note that this will
             also exclude any documents which are lacking date information.
+        search_ops : list of tuples
+            Will be passed to `GoogleSerp` constructor; see
+            `GoogleSerp.__init__` docstring.
+        search_kwds : dict
+            Will be passed to `GoogleSerp` constructor; see
+            `GoogleSerp.__init__` docstring.
         """
-        search_ops = [('-ext', x) for x in SiteResults.exclude_formats]
-        search_ops.append(('site', site))
+        if not search_ops:
+            search_ops = []
+        search_ops += [('-ext', x) for x in SiteResults.exclude_formats]
+        if not search_kwds:
+            search_kwds = {}
+        search_kwds['site'] = site
         if back_days:
             now = date.today()
             then = now - timedelta(days=back_days)
-            search_ops.append(('daterange', then.isoformat() + '..' +
-                              now.isoformat()))
+            search_kwds['daterange'] = then.isoformat() + '..' + now.isoformat()
 
-        super(SiteResults, self).__init__(query, *search_ops, allintext=True)
+        super(SiteResults, self).__init__(search_terms, *search_ops, **search_kwds)
 
         self.site = site
-        self.query = query
         self.back_days = back_days
 
 
-def rank_matches(wa, sources):
+def rank_matches(wa, sources, use_phrases=True, force_phrases=True,
+        back_days=None, allintext=False):
     """
     Returns a list of dicts with ranked search results for matches against
     `article`.
@@ -542,17 +545,26 @@ def rank_matches(wa, sources):
         WebArticle.match_score() will be used to evaluate content match.
     sources : dict
         Mapping of source names to urls
+    use_phrases : boolean
+        If `True` multiple-word phrases will be put at beginning of search
+        string.
+    force_phrases : boolean
+        If `True` phrases will be enclosed in quotes.
+    allintext : boolean
+        If `True` search terms will be prefixed by `allintext:`
     """
     # minimum word count for matching article to make it into ranking:
     wc_threshold = 400
-    back_days = 90
 
-    query = wa.search_string()
-    logging.debug("searching %s for '%s'", ' ,'.join(sources.keys()), query)
+    query = wa.search_string(use_phrases=use_phrases,
+                             force_phrases=force_phrases)
+    kwds = {'allintext': True} if allintext else {}
+    logging.debug("searching %s for '%s' with %s", ' ,'.join(sources.keys()),
+                  query, kwds)
     res = {}
     for src, url in sources.iteritems():
         try:
-            res[src] = SiteResults(url, query, back_days=back_days)
+            res[src] = SiteResults(url, query, back_days=back_days, **kwds)
         except EmptySearchResult:
             logging.debug("SiteResult: empty search result for %s", src)
             continue

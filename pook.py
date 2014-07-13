@@ -22,28 +22,20 @@ urlForm = form.Form(
         form.Textbox('URL', form.notnull, decription='Reference URL'),
         class_='urlform')
 
-searchScopeForm = form.Form(
-        form.Radio('Scope', [('narrow', 'include phrases and single words '
-        'in query'), ('broader', 'use only phrases'), ('wide', 'use only '
-        'words')], value='narrow'), class_='searchscopeform')
-
 searchPhrasesForm = form.Form(
-        form.Checkbox('Search phrases'))
+        form.Checkbox('Search phrases'),
+        form.Checkbox('Force phrases'))
 
-minCountForm = form.Form(
-        form.Dropdown('MinCount', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], value=0))
-
-sourceSelForm = form.Form(
-        form.Checkbox('Left field'),
-        form.Checkbox('Center'),
-        form.Checkbox('Right field'))
-
-# source grouping: intervals below are open on the left
+dateRangeForm = form.Form(
+        form.Dropdown('Months in past', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], value=0))
 
 formDict = {
         'url': urlForm,
+        'phrases': searchPhrasesForm,
+        'date_range': dateRangeForm,
 }
 
+# source grouping: intervals below are open on the left
 src_cats = {
         'right': (-1.0, -0.5),
         'center': (-0.5, 0.5),
@@ -67,30 +59,43 @@ class request(object):
             if not form.validates():
                 return render.request(formDict)
 
+        # extract form data
         form_data = web.input()
-        logging.debug("ref_url=%s" % form_data['URL'])
+        ref_url = form_data['URL']
+        months_in_past = int(form_data['Months in past'])
+        searchPhrases = 'Search phrases' in form_data
+        forcePhrases = 'Force phrases' in form_data
+        logging.debug("ref_url=%s" % ref_url)
+        logging.debug("month in past=%d" % months_in_past)
+        logging.debug("Search phrases=%s" % searchPhrases)
+        logging.debug("Force phrases=%s" % forcePhrases)
 
         try:
-            wa = al.WebArticle(form_data['URL'], REF.stop_words,
+            wa = al.WebArticle(ref_url, REF.stop_words,
                     REF.late_kills)
             logging.debug("article '%s' (%d words) at url='%s': query='%s'",
-                    wa.title, wa.wcount, wa.url, wa.search_string())
+                    wa.title, wa.wcount, wa.url,
+                    wa.search_string(use_phrases=searchPhrases,
+                        force_phrases=forcePhrases))
         except al.ArticleFormatError:
-            return render.error("Non-html resource at %s" % form_data['URL'])
+            return render.error("Non-html resource at %s" % ref_url,
+                                '/request')
         except al.ArticleExtractionError:
-            return render.error("Cannot extract article from %s" %
-                    form_data['URL'])
+            return render.error("Cannot extract article from %s" % ref_url,
+                                '/request')
         except al.InvalidUrlError:
-            return render.error("Invalid URL: %s" % form_data['URL'])
+            return render.error("Invalid URL: %s" % ref_url, '/request')
         except al.PageRetrievalError:
-            return render.error("Could not retrieve URL: %s" %
-                    form_data['URL'])
+            return render.error("Could not retrieve URL: %s" % ref_url,
+                                '/request')
 
         results = {}
         for cat, rng in src_cats.iteritems():
             sources = dict((src, v[0]) for (src, v) in
                     REF.source_sites.iteritems() if rng[0] <= v[1] < rng[1])
-            results[cat] = al.rank_matches(wa, sources)
+            results[cat] = al.rank_matches(wa, sources,
+                    use_phrases=searchPhrases, force_phrases=forcePhrases,
+                    back_days=months_in_past * 30, allintext=True)
             logging.debug("%s: %d ranked results", cat, len(results[cat]))
 
         return render.results(wa, results, '/request')

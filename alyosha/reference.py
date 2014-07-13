@@ -1,18 +1,19 @@
+# TODO: complete priority ranking
 source_sites = {
         # right outfield:
-        'Townhall': ('townhall.com', -0.9),
-        'FoxNews': ('foxnews.com', -0.7),
-        'The Weekly Standard': ('weeklystandard.com', -0.7),
-        'National Review': ('nationalreview.com', -0.6),
-        'EconLib': ('econlib.org', -0.6),
+        'Townhall': ('townhall.com', -0.9, 0.2),
+        'FoxNews': ('foxnews.com', -0.7, 0.5),
+        'The Weekly Standard': ('weeklystandard.com', -0.7, 0.5),
+        'National Review': ('nationalreview.com', -0.6, 0.8),
+        'EconLib': ('econlib.org', -0.6, 1.0),
         # right center:
-        'Hoover Institution': ('hoover.org', -0.4),
+        'Hoover Institution': ('hoover.org', -0.4, 0.9),
         'Financial Times': ('ft.com', -0.3),
         'WSJ': ('wsj.com', -0.3),
-        'The Economist': ('economist.com', -0.3),
+        'The Economist': ('economist.com', -0.3, 0.9),
         'Lawfare': ('lawfareblog.com', -0.2),
-        'Christian Science Monitor': ('csmonitor.com', -0.1),
-        'FiveThirtyEight': ('fivethirtyeight.com', -0.1),
+        'Christian Science Monitor': ('csmonitor.com', -0.1, 1.0),
+        'FiveThirtyEight': ('fivethirtyeight.com', -0.1, 0.8),
         # left center:
         'FactCheck': ('factcheck.org', 0.1),
         'The Guardian': ('theguardian.com', 0.4),

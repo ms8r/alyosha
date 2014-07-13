@@ -13,4 +13,16 @@ $if not formDict['url'].valid:
     <p class="error">Try again, AmeriCAN</p>
 $:formDict['url'].render()
 
+<h2 class="formheader">Select if multi-word phrases are to be used in the search string</h2>
+<p><em>Note: if 'Force phrases' is selected, phrases will be enclosed in quotes in the search string.</em></p>
+$if not formDict['phrases'].valid:
+    <p class="error">Try again, AmeriCAN</p>
+$:formDict['phrases'].render()
+
+<h2 class="formheader">Select how many months into the past you want the search to extend</h2>
+<p><em>Note: select '0' if you don't want to restrict the date range.</em></p>
+$if not formDict['phrases'].valid:
+    <p class="error">Try again, AmeriCAN</p>
+$:formDict['date_range'].render()
+
 <input type="submit" /> </form>
