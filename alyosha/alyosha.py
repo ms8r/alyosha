@@ -395,6 +395,7 @@ class GoogleSerp(object):
     _xp_desc = _prefix + '//div[@class="s"]//span[@class="st"]'
     _xp_resnum = '//div[@id="resultStats"]'
     # TODO: catch single search result cases and scrape differently
+    # TODO: extract date from description and include in result ranking
 
     _resnum_re = re.compile(r'\D*([\d.,]+) result')
 
