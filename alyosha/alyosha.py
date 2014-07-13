@@ -1,12 +1,13 @@
-import requests
-from goose import Goose
-from lxml import html
 import random
 import re
 import logging
 from collections import Counter
 import unicodedata
 from datetime import date, timedelta
+import requests
+from goose import Goose
+from lxml import html
+import numpy as np
 import nltk
 
 import reference as REF
@@ -216,8 +217,6 @@ class WebArticle(object):
         lemmatized = [(w, c) for (w, c) in lemma_count.iteritems()]
         lemmatized.sort(key=lambda t: t[1], reverse=True)
         self.top_words = [w for w in lemmatized if w[0] not in late_kills]
-        # TODO: establish count threshold for phrases as average of top n word
-        # counts:
         n = min(10, len(self.top_words))
         min_count = (sum([c[1] for c in self.top_words[:n]]) / float(n)
                 if n > 0 else float('nan'))
@@ -292,7 +291,22 @@ class WebArticle(object):
 
         return result
 
-    def match_score(self, other, num_words=20):
+    def match_score(self, other, num_words=50):
+        """
+        Determine "content proximity" between two `WebArticle` as the cosine
+        between the two object's vector space representation, including the
+        `num_words` most frequent words from each object's `top_words`
+        attribute.
+        """
+        num_words = min(num_words, len(self.top_words), len(other.top_words))
+        da = dict(self.top_words[:num_words])
+        db = dict(other.top_words[:num_words])
+        voc = list(set(da.keys()) | set(db.keys()))
+        a = np.array([[da.get(w, 0), db.get(w, 0)] for w in voc])
+        return np.dot(a[:, 0], a[:, 1]) / (np.linalg.norm(a[:, 0]) *
+                                           np.linalg.norm(a[:, 1]))
+
+    def match_score_old(self, other, num_words=20):
         """
         Determines the intersection of top words between self and other as a
         percentage of the number of top words considered.
@@ -310,7 +324,6 @@ class WebArticle(object):
         Tuple (phrase overlap percentage, word overlap percentage, combined
         score) with all three values being between 0 and 1 inclusive.
         """
-        # TODO: calculate as dot product between word vectors
         p_base = max(len(self.top_phrases), len(other.top_phrases))
         if p_base > 0:
             p_intersect = set([p[0] for p in self.top_phrases]).intersection(
@@ -596,7 +609,7 @@ def rank_matches(wa, sources, use_phrases=True, force_phrases=True,
             logging.debug("%s: discarding '%s', only %d words",
                           src, title, wb.wcount)
             continue
-        __, __, match_score = wa.match_score(wb)
+        match_score = wa.match_score(wb, num_words=20)
         matches.append({'src': src, 'wc': wb.wcount, 'score': match_score,
                 'title': title, 'url': url, 'link': sr.res[0]['link'],
                 'desc': sr.res[0]['desc']})
