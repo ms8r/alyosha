@@ -1,4 +1,4 @@
-$def with (wa, results, back_link)
+$def with (wa, search_str, results, back_link)
 
 $var title: Foxes, not Hedgehogs - Results
 
@@ -28,7 +28,7 @@ $def cat_res(cr, max_res):
 $if results:
     <h1>...you may also want to look at some of these</h1>
     <div id="results-top-box">
-        <p>Based on the article <em><a href="$wa.url">$wa.title</a></em>, a search for <em>'$wa.search_string()'</em> yields the following results:</p>
+        <p>Based on the article <em><a href="$wa.url">$wa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
         <p><a href="$back_link">&lt;&lt; Go back</a></p>
     </div>
 

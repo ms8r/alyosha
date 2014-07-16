@@ -72,7 +72,7 @@ class PageRetrievalError(WebArticleError):
 
 class WebArticle(object):
     """
-    Will retrieve aN URL, extract the main article and expose word/phrase lists
+    Will retrieve an URL, extract the main article and expose word/phrase lists
     and counts.
 
     Attributes:
@@ -291,7 +291,7 @@ class WebArticle(object):
 
         return result
 
-    def match_score(self, other, num_words=50):
+    def match_score(self, other, num_words=20):
         """
         Determine "content proximity" between two `WebArticle` as the cosine
         between the two object's vector space representation, including the
@@ -305,51 +305,6 @@ class WebArticle(object):
         a = np.array([[da.get(w, 0), db.get(w, 0)] for w in voc])
         return np.dot(a[:, 0], a[:, 1]) / (np.linalg.norm(a[:, 0]) *
                                            np.linalg.norm(a[:, 1]))
-
-    def match_score_old(self, other, num_words=20):
-        """
-        Determines the intersection of top words between self and other as a
-        percentage of the number of top words considered.
-
-        Arguments:
-        ----------
-        other : WebArticle object
-            Article to compare self with.
-        num_words : int
-            Total number of single words to be includes in comparison.  Phrases
-            will always be included at thir full length.
-
-        Returns:
-        --------
-        Tuple (phrase overlap percentage, word overlap percentage, combined
-        score) with all three values being between 0 and 1 inclusive.
-        """
-        p_base = max(len(self.top_phrases), len(other.top_phrases))
-        if p_base > 0:
-            p_intersect = set([p[0] for p in self.top_phrases]).intersection(
-                    set([p[0] for p in other.top_phrases]))
-            p_overlap = len(p_intersect) / float(p_base)
-        else:
-            p_intersect = set()
-            p_overlap = 0.
-
-        w_base = min(num_words, max(len(self.top_words), len(other.top_words)))
-        w_min = min(num_words, len(self.top_words), len(other.top_words))
-        if w_base > 0:
-            w_intersect = set([w for w in self.top_words[:w_min]]).intersection(
-                    set([w for w in other.top_words[:w_min]]))
-            wi_len = len(w_intersect)
-            pi_len = len(p_intersect)
-            w_overlap = wi_len / float(w_base)
-            m = WebArticle._phrase_match_score_weight
-            combined_score = (wi_len + m * pi_len) / float(w_base +
-                                                           m * pi_len)
-        else:
-            w_intersect = set()
-            w_overlap = 0.
-            combined_score = p_overlap
-
-        return (p_overlap, w_overlap, combined_score)
 
     @property
     def phrase_overlaps(self):
@@ -477,7 +432,7 @@ class GoogleSerp(object):
             atags += parsed.xpath(xp)
         if not atags:
             logging.info("could not find any search results, "
-                          "raising EmptySearchResult")
+                         "raising EmptySearchResult")
             raise EmptySearchResult
 
         titles = [a.text_content() for a in atags]
@@ -515,7 +470,7 @@ class SiteResults(GoogleSerp):
         site : str
             Site to which search is to be restricted (e.g. 'nytimes.com')
         search_terms : str
-            Query ro be submitted; will be url quoted before appending to url
+            Query to be submitted; will be url quoted before appending to url
         back_days : int
             If specified a `daterange' operator will be appended to the search
             string, restricting the search results to documents that have been
@@ -545,57 +500,88 @@ class SiteResults(GoogleSerp):
         self.back_days = back_days
 
 
-def rank_matches(wa, sources, use_phrases=True, force_phrases=True,
-        back_days=None, allintext=False):
+def best_matches(wa, sources, search_str, back_days=None, min_wc=0,
+        min_match=0, num_matches=1, *search_ops, **search_kwds):
     """
     Returns a list of dicts with ranked search results for matches against
-    `article`.
+    `wa`.
 
     Arguments:
     ---------
     wa : WebArticle object
         Reference artticle against which to match results.
         WebArticle.match_score() will be used to evaluate content match.
-    sources : dict
-        Mapping of source names to urls
-    use_phrases : boolean
-        If `True` multiple-word phrases will be put at beginning of search
-        string.
-    force_phrases : boolean
-        If `True` phrases will be enclosed in quotes.
-    allintext : boolean
-        If `True` search terms will be prefixed by `allintext:`
-    """
-    # minimum word count for matching article to make it into ranking:
-    wc_threshold = 400
+    sources : sequence
+        List of strings with sites to search. Sites will be searched in order
+        until the list is exhausted or at most `num_matches` eligible matches
+        have been found.
+    min_wc : int
+        Minimum length (in number of words) for a match to be eligible.
+    min_match : float [0..1]
+        Minimum match score with `wa` for a search result to be eligible.
+    num_matches : int
+        Maximum number of matches to return.
+    search_str : str
+        Query to be submitted; will be url quoted before appending to url
+    back_days : int
+        If specified a `daterange' operator will be appended to the search
+        string, restricting the search results to documents that have been
+        modified no longer than `back_days` days ago. Note that this will
+        also exclude any documents which are lacking date information.
+    search_ops : list of tuples
+        Will be passed to `GoogleSerp` constructor; see
+        `GoogleSerp.__init__` docstring.
+    search_kwds : dict
+        Will be passed to `GoogleSerp` constructor; see
+        `GoogleSerp.__init__` docstring.
 
-    query = wa.search_string(use_phrases=use_phrases,
-                             force_phrases=force_phrases)
-    kwds = {'allintext': True} if allintext else {}
-    logging.debug("searching %s for '%s' with %s", ' ,'.join(sources.keys()),
-                  query, kwds)
-    res = {}
-    for src, url in sources.iteritems():
+    Returns:
+    --------
+    List af dicts with search results ranked by content match. Dict
+    keys are 'src', 'wc', 'score', 'title', 'url', 'link', 'desc'.
+    """
+    matches = []
+    for src in sources:
+        if len(matches) >= num_matches:
+            break
         try:
-            res[src] = SiteResults(url, query, back_days=back_days, **kwds)
+            sr = SiteResults(src, search_str, back_days=back_days, *search_ops,
+                    **search_kwds)
         except EmptySearchResult:
-            logging.debug("SiteResult: empty search result for %s", src)
+            logging.debug("SiteResults: empty search result for %s", src)
             continue
         except ResultParsingError:
-            logging.debug("SiteResult: parsing error for %s", src)
+            logging.debug("SiteResults: parsing error for %s", src)
             continue
         except PageRetrievalError:
-            logging.debug("SiteResult: PageRetrievalError for %s", src)
+            logging.debug("SiteResults: PageRetrievalError for %s", src)
             continue
+        logging.debug("%s: found %d matches", src, sr.resnum)
+        # NOTE: num_matches guesstimated (look at no more than two hits per
+        # source)
+        m = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
+                num_tries=2)
+        if m:
+            matches.append(m)
 
-        logging.debug("%s: found %d matches", url, res[src].resnum)
+    return sorted(matches, key=lambda k: k['score'], reverse=True)
 
-    # for now we just look at top match for each site:
-    # TODO: change to allow looking at top n matches
-    matches = []
-    for src, sr in res.iteritems():
-        url = sr.res[0]['url']
-        title = sr.res[0]['title']
+
+def get_match(wa, sr, min_wc=0, min_match=0, num_tries=1):
+    """
+    Will try to retrieve a match from SiteResult object `sr` with a minimum
+    length of `min_wc` words and a minimum content match of `min_match` against
+    WebArticle object `wa`. Will try at most `num_tries` elements in `sr` to
+    produce a match.
+
+    Returns a dict with the match if found or None otherwise. Dict keys are
+    'src', 'wc', 'score', 'title', 'url', 'link', 'desc'.
+    """
+    result = None
+    stop = min(num_tries, len(sr.res))
+    for r in sr.res[:num_tries]:
+        url = r['url']
+        title = r['title']
         if duplicate_urls(wa.url, url):
             logging.debug("Skipping %s, same as reference article", url)
             continue
@@ -603,18 +589,20 @@ def rank_matches(wa, sources, use_phrases=True, force_phrases=True,
             wb = WebArticle(url, REF.stop_words, REF.late_kills)
         except WebArticleError:
             logging.debug("%s: failed to extract article '%s'",
-                    src, title)
+                    sr.site, title)
             continue
-        if wb.wcount < wc_threshold:
+        if wb.wcount < min_wc:
             logging.debug("%s: discarding '%s', only %d words",
-                          src, title, wb.wcount)
+                          sr.site, title, wb.wcount)
             continue
         match_score = wa.match_score(wb, num_words=20)
-        matches.append({'src': src, 'wc': wb.wcount, 'score': match_score,
-                'title': title, 'url': url, 'link': sr.res[0]['link'],
-                'desc': sr.res[0]['desc']})
+        if match_score >= min_match:
+            result = {'src': sr.site, 'wc': wb.wcount, 'score': match_score,
+                    'title': title, 'url': url, 'link': r['link'], 'desc':
+                    r['desc']}
+            break
 
-    return sorted(matches, key=lambda k: k['score'], reverse=True)
+    return result
 
 
 def duplicate_urls(url1, url2):

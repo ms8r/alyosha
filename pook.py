@@ -72,8 +72,8 @@ class request(object):
         # ignore any parameters url:
         ref_url = scheme + '://' + parsed[1] + parsed[2]
         back_days = int(form_data['Months in past']) * 30
-        use_phrases = 'Use phrases' in form_data
-        force_phrases = 'Force phrases' in form_data
+        use_phrases = 1 if 'Use phrases' in form_data else 0
+        force_phrases = 1 if 'Force phrases' in form_data else 0
         params = {
                 'url': ref_url,
                 'use_phrases': use_phrases,
@@ -87,14 +87,18 @@ class request(object):
 class results(object):
 
     def GET(self):
-        i = web.input(url=None, use_phrases=False, force_phrases=False,
+        i = web.input(url=None, use_phrases=0, force_phrases=0,
                 back_days=None)
+        logging.debug("results parameter: url=%s, use_phrases=%s, "
+                      "force_phrases=%s, back_days=%s" %
+                      (i.url, bool(int(i.use_phrases)),
+                      bool(int(i.force_phrases)), i.back_days))
         try:
             wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
+            search_str = wa.search_string(use_phrases=int(i.use_phrases),
+                    force_phrases=int(i.force_phrases))
             logging.debug("article '%s' (%d words) at url='%s': query='%s'",
-                    wa.title, wa.wcount, wa.url,
-                    wa.search_string(use_phrases=i.use_phrases,
-                        force_phrases=i.force_phrases))
+                    wa.title, wa.wcount, wa.url, search_str)
         except al.ArticleFormatError:
             params = {
                     'msg': "Non-html resource at %s" % i.url,
@@ -122,14 +126,15 @@ class results(object):
 
         results = {}
         for cat, rng in src_cats.iteritems():
-            sources = dict((src, v[0]) for (src, v) in
-                    REF.source_sites.iteritems() if rng[0] <= v[1] < rng[1])
-            results[cat] = al.rank_matches(wa, sources,
-                    use_phrases=i.use_phrases, force_phrases=i.force_phrases,
-                    back_days=int(i.back_days), allintext=False)
+            sources = [(t[2], t[0]) for t in REF.source_sites.values()
+                       if rng[0] <= t[1] < rng[1]]
+            sources = [t[1] for t in sorted(sources)]
+            results[cat] = al.best_matches(wa, sources, search_str,
+                    back_days=int(i.back_days), min_wc=400, min_match=0.4,
+                    num_matches=2, allintext=False)
             logging.debug("%s: %d ranked results", cat, len(results[cat]))
 
-        return render.results(wa, results, '/request')
+        return render.results(wa, search_str, results, '/request')
 
 
 # For serving using any wsgi server

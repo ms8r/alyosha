@@ -1,34 +1,36 @@
 # TODO: complete priority ranking
+# tuple has: site, 'right'..'left' score (-1, 1), and priority/weight
+# (heavy sinks to botom)
 source_sites = {
         # right outfield:
-        'Townhall': ('townhall.com', -0.9, 0.2),
-        'FoxNews': ('foxnews.com', -0.7, 0.5),
-        'The Weekly Standard': ('weeklystandard.com', -0.7, 0.5),
-        'National Review': ('nationalreview.com', -0.6, 0.8),
-        'EconLib': ('econlib.org', -0.6, 1.0),
+        'Townhall': ('townhall.com', -0.9, 90),
+        'FoxNews': ('foxnews.com', -0.7, 60),
+        'The Weekly Standard': ('weeklystandard.com', -0.7, 50),
+        'National Review': ('nationalreview.com', -0.6, 40),
+        'EconLib': ('econlib.org', -0.6, 30),
         # right center:
-        'Hoover Institution': ('hoover.org', -0.4, 0.9),
-        'Financial Times': ('ft.com', -0.3),
-        'WSJ': ('wsj.com', -0.3),
-        'The Economist': ('economist.com', -0.3, 0.9),
-        'Lawfare': ('lawfareblog.com', -0.2),
-        'Christian Science Monitor': ('csmonitor.com', -0.1, 1.0),
-        'FiveThirtyEight': ('fivethirtyeight.com', -0.1, 0.8),
+        'Hoover Institution': ('hoover.org', -0.4, 30),
+        'Financial Times': ('ft.com', -0.3, 25),
+        'WSJ': ('wsj.com', -0.3, 20),
+        'The Economist': ('economist.com', -0.3, 15),
+        'Lawfare': ('lawfareblog.com', -0.2, 35),
+        'Christian Science Monitor': ('csmonitor.com', -0.1, 5),
+        'FiveThirtyEight': ('fivethirtyeight.com', -0.1, 15),
         # left center:
-        'FactCheck': ('factcheck.org', 0.1),
-        'The Guardian': ('theguardian.com', 0.4),
-        'Der Spiegel': ('spiegel.de', 0.2),
-        'Brookings': ('brookings.edu', 0.2),
-        'The Atlantic': ('theatlantic.com', 0.2),
-        'Slate Magazine': ('slate.com', 0.4),
-        'Washington Post': ('washingtonpost.com', 0.2),
-        'New York Times': ('nytimes.com', 0.2),
+        'FactCheck': ('factcheck.org', 0.1, 50),
+        'The Guardian': ('theguardian.com', 0.4, 25),
+        'Der Spiegel': ('spiegel.de', 0.2, 30),
+        'Brookings': ('brookings.edu', 0.2, 25),
+        'The Atlantic': ('theatlantic.com', 0.2, 30),
+        'Slate Magazine': ('slate.com', 0.4, 40),
+        'Washington Post': ('washingtonpost.com', 0.2, 15),
+        'New York Times': ('nytimes.com', 0.2, 15),
         # left outfield:
-        'MNBC': ('msnbc.com', 0.6),
-        'Mother Jones': ('motherjones.com', 0.7),
-        'Huffington Post': ('huffingtonpost.com', 0.6),
-        'Daily Kos': ('dailykos.com', 0.7),
-        'The Nation': ('thenation.com', 0.9),
+        'MNBC': ('msnbc.com', 0.6, 50),
+        'Mother Jones': ('motherjones.com', 0.7, 30),
+        'Huffington Post': ('huffingtonpost.com', 0.6, 45),
+        'Daily Kos': ('dailykos.com', 0.7, 40),
+        'The Nation': ('thenation.com', 0.9, 35),
 }
 
 # user agents tuple taken from howdoi:
@@ -39,8 +41,7 @@ user_agents = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/2010
                'Mozilla/5.0 (Windows; Windows NT 6.1) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.46 Safari/536.5',)
 
 # list of stop words taken from
-# http://norm.al/2009/04/14/list-of-english-stop-words/
-# augmented by capitalzed words
+# http://norm.al/2009/04/14/list-of-english-stop-words
 stop_words = frozenset([
     'a', 'about', 'above', 'across', 'after', 'afterwards', 'again',
     'against', 'all', 'almost', 'alone', 'along', 'already', 'also',
