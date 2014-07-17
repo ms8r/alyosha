@@ -7,6 +7,13 @@ from alyosha import alyosha as al
 from alyosha import reference as REF
 # TODO: add threading for web requests
 
+# Minimum word count for search result to be eligible
+MIN_WC = 400
+# Minimum match score for search result to be eligible
+MIN_MATCH = 0.4
+# Number of results per catergory (left-center-right)
+NUM_MATCHES = 2
+
 logging.basicConfig(level=logging.DEBUG)
 
 render = web.template.render('templates/', base='layout')
@@ -130,8 +137,9 @@ class results(object):
                        if rng[0] <= t[1] < rng[1]]
             sources = [t[1] for t in sorted(sources)]
             results[cat] = al.best_matches(wa, sources, search_str,
-                    back_days=int(i.back_days), min_wc=400, min_match=0.4,
-                    num_matches=2, allintext=False)
+                    back_days=int(i.back_days), min_wc=MIN_WC,
+                    min_match=MIN_MATCH, num_matches=NUM_MATCHES,
+                    allintext=False)
             logging.debug("%s: %d ranked results", cat, len(results[cat]))
 
         return render.results(wa, search_str, results, '/request')
