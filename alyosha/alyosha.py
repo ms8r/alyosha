@@ -3,6 +3,7 @@ import re
 import logging
 from collections import Counter
 import unicodedata
+from datetime import datetime as dt
 from datetime import date, timedelta
 import requests
 from goose import Goose
@@ -348,25 +349,25 @@ class GoogleSerp(object):
     _search_url = 'https://www.google.com/search?q={0}'
 
     # XPath strings to grab search results
+    _xp_resnum = '//div[@id="resultStats"]'
     # NOTE: the `div[@class-"srg"] part excludes news items at the top of the
-    # page (not stable)
-    # NOTE: news items not an issue if request is sent with additional search
+    # page (not stable); not an issue if request is sent with additional search
     # parameter (e.g. 'allintext')
+    # NOTE: _prefix only required if more than 1 search result
     _prefix = '//div[@id="ires"]//div[@class="srg"]//li[@class="g"]'
     # `_xp_title` points to `a` tags containing titles as text content and urls
     # as `href` attributes: need multiple xp's to collect news items at top of
     # results and regular results
     _xp_title = [
             # _prefix + '//span[@class="tl"]/a[1]',
-            _prefix + '//h3[@class="r"]/a[1]'
+            '//h3[@class="r"]/a[1]'
     ]
-    _xp_link = _prefix + '//cite'
-    _xp_desc = _prefix + '//div[@class="s"]//span[@class="st"]'
-    _xp_resnum = '//div[@id="resultStats"]'
-    # TODO: catch single search result cases and scrape differently
-    # TODO: extract date from description and include in result ranking
+    _xp_link = '//cite'
+    _xp_desc = '//div[@class="s"]//span[@class="st"]'
 
     _resnum_re = re.compile(r'\D*([\d.,]+) result')
+    # NOTE: date works only for US format 'mmm dd, yyyy'
+    _date_re = re.compile(r'[a-zA-Z]+ \d{1,2}, \d{4,4}')
 
     def __init__(self, search_terms, *search_ops, **search_kwds):
         """
@@ -427,9 +428,10 @@ class GoogleSerp(object):
             self.resnum = None
         logging.debug("google reports %s results" % self.resnum)
 
+        pre = GoogleSerp._prefix if self.resnum > 1 else ''
         atags = []
         for xp in GoogleSerp._xp_title:
-            atags += parsed.xpath(xp)
+            atags += parsed.xpath(pre + xp)
         if not atags:
             logging.info("could not find any search results, "
                          "raising EmptySearchResult")
@@ -437,13 +439,16 @@ class GoogleSerp(object):
 
         titles = [a.text_content() for a in atags]
         urls = [a.attrib['href'] for a in atags]
-        links = [c.text_content() for c in parsed.xpath(GoogleSerp._xp_link)]
-        descs = [c.text_content() for c in parsed.xpath(GoogleSerp._xp_desc)]
+        links = [c.text_content() for c in parsed.xpath(pre + GoogleSerp._xp_link)]
+        descs = [c.text_content() for c in parsed.xpath(pre + GoogleSerp._xp_desc)]
         if not len(titles) == len(links) == len(descs) == len(urls):
             raise ResultParsingError
-
-        self.res = [{'title': t, 'link': a, 'desc': d, 'url': u}
-                    for t, a, d, u in zip(titles, links, descs, urls)]
+        dates = [GoogleSerp._date_re.match(d) for d in descs]
+        for i, d in enumerate(dates):
+            dates[i] = (dt.strptime(d.group(), '%b %d, %Y').date()
+                        if d else None)
+        self.res = [{'title': t, 'link': a, 'desc': x, 'url': u, 'date': d}
+                for (t, a, x, u, d) in zip(titles, links, descs, urls, dates)]
         logging.debug("stored %d results in res dict" % len(titles))
 
 
@@ -463,7 +468,8 @@ class SiteResults(GoogleSerp):
     """
     exclude_formats = WebArticle.exclude_formats
 
-    def __init__(self, site, search_terms, back_days=None, *search_ops, **search_kwds):
+    def __init__(self, site, search_terms, back_days=None, *search_ops,
+            **search_kwds):
         """
         Arguments:
         ----------
@@ -492,9 +498,11 @@ class SiteResults(GoogleSerp):
         if back_days:
             now = date.today()
             then = now - timedelta(days=back_days)
-            search_kwds['daterange'] = then.isoformat() + '..' + now.isoformat()
+            search_kwds['daterange'] = (then.isoformat() + '..' +
+                                        now.isoformat())
 
-        super(SiteResults, self).__init__(search_terms, *search_ops, **search_kwds)
+        super(SiteResults, self).__init__(search_terms, *search_ops,
+                                          **search_kwds)
 
         self.site = site
         self.back_days = back_days
