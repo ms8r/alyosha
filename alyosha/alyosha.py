@@ -570,6 +570,8 @@ def best_matches(wa, sources, search_str, back_days=None, min_wc=0,
         m = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
                 num_tries=2)
         if m:
+            logging.debug("found match with score %.3f: %s from %s",
+                    m['score'], m['title'], m['src'])
             matches.append(m)
 
     return sorted(matches, key=lambda k: k['score'], reverse=True)
@@ -609,6 +611,9 @@ def get_match(wa, sr, min_wc=0, min_match=0, num_tries=1):
                     'title': title, 'url': url, 'link': r['link'], 'desc':
                     r['desc']}
             break
+        else:
+            logging.debug("dicarding \"%s\" from %s with score %.3f", title,
+                    sr.site, match_score)
 
     return result
 

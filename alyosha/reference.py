@@ -10,7 +10,8 @@ source_sites = {
         'EconLib': ('econlib.org', -0.6, 30),
         # right center:
         'Hoover Institution': ('hoover.org', -0.4, 30),
-        'Financial Times': ('ft.com', -0.3, 25),
+        # FT blocks with registration page
+        # 'Financial Times': ('ft.com', -0.3, 25),
         'WSJ': ('wsj.com', -0.3, 20),
         'The Economist': ('economist.com', -0.3, 15),
         'Lawfare': ('lawfareblog.com', -0.2, 35),

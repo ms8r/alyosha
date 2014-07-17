@@ -10,9 +10,9 @@ from alyosha import reference as REF
 # Minimum word count for search result to be eligible
 MIN_WC = 400
 # Minimum match score for search result to be eligible
-MIN_MATCH = 0.4
+MIN_MATCH = 0.3
 # Number of results per catergory (left-center-right)
-NUM_MATCHES = 2
+NUM_MATCHES = 1
 
 logging.basicConfig(level=logging.DEBUG)
 
