@@ -344,12 +344,16 @@ class GoogleSerp(object):
         Search operator/vaue pairs that were passed to the constructor.
     search_kwds : dict
         Search operator/value pairs that were passed to the constructor.
+    alt_query : str
+        Will be set to alternative search string proposed by Google if it
+        cannot find results for the original query. `None` otherwise.
     """
 
     _search_url = 'https://www.google.com/search?q={0}'
 
     # XPath strings to grab search results
     _xp_resnum = '//div[@id="resultStats"]'
+    _xp_altquery = '///div[@id="topstuff"]//div[@class="med"]'
     # NOTE: the `div[@class-"srg"] part excludes news items at the top of the
     # page (not stable); not an issue if request is sent with additional search
     # parameter (e.g. 'allintext')
@@ -369,15 +373,51 @@ class GoogleSerp(object):
     # NOTE: date works only for US format 'mmm dd, yyyy'
     _date_re = re.compile(r'[a-zA-Z]+ \d{1,2}, \d{4,4}')
 
-    def __init__(self, search_terms, *search_ops, **search_kwds):
+    def __init__(self, search_terms=None, exact=False, *search_ops,
+                 **search_kwds):
         """
+        Calls `self.search()` if any of the arguments are specified.
+
+        Raises:
+        -------
+        `EmptySearchResult` if no results can be found.
+        `ResultParsingError` if results could not be parsed successfully.
+        `PageRetrievalError` if
+            - the web page cannot be retrieved by requests (e.g. timeout)
+            - the GET request returns a non-OK status code
+        """
+        if not (search_terms or search_ops or search_kwds):
+            return
+
+        if search_terms is None:
+            search_terms = ''
+        try:
+            self.search(search_terms, *search_ops, **search_kwds)
+        except EmptySearchResult:
+            raise
+        except ResultParsingError:
+            raise
+        except PageRetrievalError:
+            raise
+
+
+    def search(self, search_terms, exact=False, *search_ops, **search_kwds):
+        """
+        Runs search and updates attributes.
+
         Arguments:
         ----------
         search_terms : str
             Terms to be searched; will be url quoted before appending to url
+        exact : boolean
+            If `True`, `search` will raise `EmptySearchResult` if Google
+            responds with "No results found for [query]. Showing results for
+            [relaxed query]". If `False`, `search` will accept the alternative
+            results and set `self.relaxed_query` to the string reported by
+            Google.
         search_ops : list of tuples
             Search operators with associated values to be passed to google;
-            examples: `site`, `link`, `daterenge`, `-ext` (for filetype
+            examples: `site`, `link`, `daterange`, `-ext` (for filetype
             exclusion, e.g. `-ext:pdf`). `search_ops` can be used for
             oeprators that can appear in multiple instances (e.g. `-ext`).
         search_kwds : dict
@@ -388,6 +428,10 @@ class GoogleSerp(object):
              - https://developers.google.com/search-appliance/documentation/614/xml_reference
              - https://support.google.com/websearch/answer/136861
 
+        Returns:
+        --------
+        Number of search results reported by Google as int.
+
         Raises:
         -------
         `EmptySearchResult` if no results can be found.
@@ -396,6 +440,9 @@ class GoogleSerp(object):
             - the web page cannot be retrieved by requests (e.g. timeout)
             - the GET request returns a non-OK status code
         """
+        # reset `res`, `resnum` and `relaxed_query` in case we get tripped
+        # somewehere...
+        self.res = self.resnum = self.alt_query = None
         # construct search string:
         if 'allintext' in search_kwds:
             if search_kwds['allintext']:
@@ -428,6 +475,17 @@ class GoogleSerp(object):
             self.resnum = None
         logging.debug("google reports %s results" % self.resnum)
 
+        # check if Google relaxed query:
+        relaxed = parsed.xpath(GoogleSerp._xp_altquery)
+        if not len(relaxed) == 2:
+            logging.debug("Google seems to indicate alternative search "
+                          "string for '%s'; unable to parse", query)
+        elif relaxed[0].text_content().lower().startswith( "no results found"):
+            if exact:
+                self.resnum = 0
+                raise EmptySearchResult
+            self.alt_query = relaxed[1].xpath('a').text_content()
+
         pre = GoogleSerp._prefix if self.resnum > 1 else ''
         atags = []
         for xp in GoogleSerp._xp_title:
@@ -450,6 +508,8 @@ class GoogleSerp(object):
         self.res = [{'title': t, 'link': a, 'desc': x, 'url': u, 'date': d}
                 for (t, a, x, u, d) in zip(titles, links, descs, urls, dates)]
         logging.debug("stored %d results in res dict" % len(titles))
+
+        return self.resnum
 
 
 class SiteResults(GoogleSerp):
