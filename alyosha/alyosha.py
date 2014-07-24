@@ -392,7 +392,7 @@ class GoogleSerp(object):
         if search_terms is None:
             search_terms = ''
         try:
-            self.search(search_terms, *search_ops, **search_kwds)
+            self.search(search_terms, exact=exact, *search_ops, **search_kwds)
         except EmptySearchResult:
             raise
         except ResultParsingError:
@@ -484,7 +484,7 @@ class GoogleSerp(object):
             if exact:
                 self.resnum = 0
                 raise EmptySearchResult
-            self.alt_query = relaxed[1].xpath('a').text_content()
+            self.alt_query = relaxed[1].xpath('a')[0].text_content()
 
         pre = GoogleSerp._prefix if self.resnum > 1 else ''
         atags = []
