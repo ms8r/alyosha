@@ -13,6 +13,11 @@ MIN_WC = 400
 MIN_MATCH = 0.3
 # Number of results per catergory (left-center-right)
 NUM_MATCHES = 1
+# Cut-off for source site's quality weight to be included in search (heavy
+# sinks to bottom, [0, 100]
+MAX_QUALITY_WEIGHT = 45
+# Max. wait (in seconds) in between calls to Google:
+GOOGLE_DELAY = 1
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -134,12 +139,13 @@ class results(object):
         results = {}
         for cat, rng in src_cats.iteritems():
             sources = [(t[2], t[0]) for t in REF.source_sites.values()
-                       if rng[0] <= t[1] < rng[1]]
+                       if (rng[0] <= t[1] < rng[1]) and t[2] <=
+                       MAX_QUALITY_WEIGHT]
             sources = [t[1] for t in sorted(sources)]
             results[cat] = al.best_matches(wa, sources, search_str,
                     back_days=int(i.back_days), min_wc=MIN_WC,
                     min_match=MIN_MATCH, num_matches=NUM_MATCHES,
-                    allintext=False)
+                    exact=False, delay=GOOGLE_DELAY, allintext=False)
             logging.debug("%s: %d ranked results", cat, len(results[cat]))
 
         return render.results(wa, search_str, results, '/request')

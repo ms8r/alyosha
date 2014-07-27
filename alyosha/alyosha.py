@@ -5,6 +5,7 @@ from collections import Counter
 import unicodedata
 from datetime import datetime as dt
 from datetime import date, timedelta
+import time
 import requests
 from goose import Goose
 from lxml import html
@@ -338,12 +339,16 @@ class GoogleSerp(object):
         will always be a complete valid url.
     resnum : int
         Number of results as returned by Google
-    search_terms : str
+    search_str : str
         Search terms that were passed to constructor
     search_ops : list of tuples
         Search operator/vaue pairs that were passed to the constructor.
     search_kwds : dict
         Search operator/value pairs that were passed to the constructor.
+        This may also include a keyword 'exact' which, if `True` will force
+        ignoring search results for which Google automatically relaxed the
+        search criteria (e.g. by ommitting quotes around phrases) because the
+        original query yielded no results.
     alt_query : str
         Will be set to alternative search string proposed by Google if it
         cannot find results for the original query. `None` otherwise.
@@ -373,10 +378,24 @@ class GoogleSerp(object):
     # NOTE: date works only for US format 'mmm dd, yyyy'
     _date_re = re.compile(r'[a-zA-Z]+ \d{1,2}, \d{4,4}')
 
-    def __init__(self, search_terms=None, exact=False, *search_ops,
-                 **search_kwds):
+    def __init__(self, *search_ops, **search_kwds):
         """
         Calls `self.search()` if any of the arguments are specified.
+
+        Arguments:
+        ----------
+        search_ops : list of 2-item tuples
+            Each element must be a `(option, value)` combination with `option`
+            being a search option recognized by Google. The can be used for
+            options that can be repeated in a query (e.g. 'ext') and therefore
+            don't fit into search_kwds.
+        search_kwds : keyword argument dict
+            Maps values to search opions. Specifically the constructor will
+            look for keywords `search_str` (the string to be searched for) and
+            `exact` (which, if `True` will ignore results for which Google
+            automatically relaxes the query, e.g. by removing quotes around
+            phrases. All other arguments will be interpreted as Google accepted
+            search parameters/modifiers, mapped to their respective values.
 
         Raises:
         -------
@@ -386,13 +405,13 @@ class GoogleSerp(object):
             - the web page cannot be retrieved by requests (e.g. timeout)
             - the GET request returns a non-OK status code
         """
-        if not (search_terms or search_ops or search_kwds):
+        if not (search_ops or search_kwds):
             return
-
-        if search_terms is None:
-            search_terms = ''
+        search_str = search_kwds.get('search_str', '')
+        if 'search_str' in search_kwds:
+            del search_kwds['search_str']
         try:
-            self.search(search_terms, exact=exact, *search_ops, **search_kwds)
+            self.search(search_str, *search_ops, **search_kwds)
         except EmptySearchResult:
             raise
         except ResultParsingError:
@@ -400,21 +419,14 @@ class GoogleSerp(object):
         except PageRetrievalError:
             raise
 
-
-    def search(self, search_terms, exact=False, *search_ops, **search_kwds):
+    def search(self, search_str, *search_ops, **search_kwds):
         """
         Runs search and updates attributes.
 
         Arguments:
         ----------
-        search_terms : str
+        search_str : str
             Terms to be searched; will be url quoted before appending to url
-        exact : boolean
-            If `True`, `search` will raise `EmptySearchResult` if Google
-            responds with "No results found for [query]. Showing results for
-            [relaxed query]". If `False`, `search` will accept the alternative
-            results and set `self.relaxed_query` to the string reported by
-            Google.
         search_ops : list of tuples
             Search operators with associated values to be passed to google;
             examples: `site`, `link`, `daterange`, `-ext` (for filetype
@@ -423,7 +435,11 @@ class GoogleSerp(object):
         search_kwds : dict
             Search operators as key: value pairs. If `'allintext' in
             search_kwds` and `search_kwds['allintext'] == True`, the search
-            terms will be prefixed by 'alltintext:'
+            terms will be prefixed by 'alltintext:'. Will specifically look for
+            keyword `exact` which, if set to `True`, will ignore results if
+            Google reports "No results" but relaxes search criteria (e.g. by
+            ommitting quotes) to show alternative results.
+
             See also:
              - https://developers.google.com/search-appliance/documentation/614/xml_reference
              - https://support.google.com/websearch/answer/136861
@@ -444,15 +460,18 @@ class GoogleSerp(object):
         # somewehere...
         self.res = self.resnum = self.alt_query = None
         # construct search string:
+        exact = search_kwds.get('exact', False)
+        if 'exact' in search_kwds:
+            del search_kwds['exact']
         if 'allintext' in search_kwds:
             if search_kwds['allintext']:
-                search_terms = "allintext:%s" % search_terms
+                search_str = "allintext:%s" % search_str
             del search_kwds['allintext']
         ops = (["%s:%s" % (s[0], s[1]) for s in search_ops]
                 + ["%s:%s" % (k, v) for (k, v) in search_kwds.iteritems()])
-        query = ' '.join([search_terms] + ops).lstrip()
+        query = ' '.join([search_str] + ops).lstrip()
 
-        self.search_terms = search_terms
+        self.search_str = search_str
         self.search_ops = search_ops
         self.search_kwds = search_kwds
         logging.debug("searching for '%s'" % query)
@@ -477,10 +496,10 @@ class GoogleSerp(object):
 
         # check if Google relaxed query:
         relaxed = parsed.xpath(GoogleSerp._xp_altquery)
-        if not len(relaxed) == 2:
+        if relaxed and not len(relaxed) == 2:
             logging.debug("Google seems to indicate alternative search "
                           "string for '%s'; unable to parse", query)
-        elif relaxed[0].text_content().lower().startswith( "no results found"):
+        elif relaxed[0].text_content().lower().startswith("no results found"):
             if exact:
                 self.resnum = 0
                 raise EmptySearchResult
@@ -497,8 +516,10 @@ class GoogleSerp(object):
 
         titles = [a.text_content() for a in atags]
         urls = [a.attrib['href'] for a in atags]
-        links = [c.text_content() for c in parsed.xpath(pre + GoogleSerp._xp_link)]
-        descs = [c.text_content() for c in parsed.xpath(pre + GoogleSerp._xp_desc)]
+        links = [c.text_content() for c in parsed.xpath(pre +
+                                                        GoogleSerp._xp_link)]
+        descs = [c.text_content() for c in parsed.xpath(pre +
+                                                        GoogleSerp._xp_desc)]
         if not len(titles) == len(links) == len(descs) == len(urls):
             raise ResultParsingError
         dates = [GoogleSerp._date_re.match(d) for d in descs]
@@ -519,7 +540,7 @@ class SiteResults(GoogleSerp):
     Attributes:
     -----------
     Inherited from `GoogleSerp` (see doc string): `res`, `resnum`,
-    `search_ops`, `search_kwds`, `search_terms`
+    `search_ops`, `search_kwds`, `search_str`
 
     site : str
         `site` argument that was passed to constructor
@@ -528,26 +549,24 @@ class SiteResults(GoogleSerp):
     """
     exclude_formats = WebArticle.exclude_formats
 
-    def __init__(self, site, search_terms, back_days=None, *search_ops,
-            **search_kwds):
+    def __init__(self, site, *search_ops, **search_kwds):
         """
         Arguments:
         ----------
         site : str
             Site to which search is to be restricted (e.g. 'nytimes.com')
-        search_terms : str
-            Query to be submitted; will be url quoted before appending to url
-        back_days : int
-            If specified a `daterange' operator will be appended to the search
-            string, restricting the search results to documents that have been
-            modified no longer than `back_days` days ago. Note that this will
-            also exclude any documents which are lacking date information.
         search_ops : list of tuples
             Will be passed to `GoogleSerp` constructor; see
             `GoogleSerp.__init__` docstring.
         search_kwds : dict
-            Will be passed to `GoogleSerp` constructor; see
-            `GoogleSerp.__init__` docstring.
+            Will look for keyword `back_days` which, if present, will restrict
+            the search results to documents that have been modified no longer
+            than `back_days` days ago. Note that this will also exclude any
+            documents which are lacking date information., The value mapped to
+            `back_days` will be converted to a `daterange` search argument and
+            `back_days` will be replaced by `daterange` in `search_kwds` All
+            other keyword arguments will be passed straight to the `GoogleSerp`
+            constructor. See `GoogleSerp.__init__` docstring for more info.
         """
         if not search_ops:
             search_ops = []
@@ -555,21 +574,23 @@ class SiteResults(GoogleSerp):
         if not search_kwds:
             search_kwds = {}
         search_kwds['site'] = site
+        back_days = search_kwds.get('back_days', None)
         if back_days:
+            del search_kwds['back_days']
             now = date.today()
             then = now - timedelta(days=back_days)
             search_kwds['daterange'] = (then.isoformat() + '..' +
                                         now.isoformat())
 
-        super(SiteResults, self).__init__(search_terms, *search_ops,
-                                          **search_kwds)
+        super(SiteResults, self).__init__(*search_ops, **search_kwds)
 
         self.site = site
         self.back_days = back_days
 
 
-def best_matches(wa, sources, search_str, back_days=None, min_wc=0,
-        min_match=0, num_matches=1, *search_ops, **search_kwds):
+def best_matches(wa, sources, search_str, back_days=None,
+        min_wc=0, min_match=0, num_matches=1, exact=False, delay=0,
+         *search_ops, **search_kwds):
     """
     Returns a list of dicts with ranked search results for matches against
     `wa`.
@@ -583,22 +604,29 @@ def best_matches(wa, sources, search_str, back_days=None, min_wc=0,
         List of strings with sites to search. Sites will be searched in order
         until the list is exhausted or at most `num_matches` eligible matches
         have been found.
+    search_str : str
+        Query to be submitted; will be url quoted before appending to url
+    search_ops : list of tuples
+        Will be passed to `GoogleSerp` constructor; see
+        `GoogleSerp.__init__` docstring.
     min_wc : int
         Minimum length (in number of words) for a match to be eligible.
     min_match : float [0..1]
         Minimum match score with `wa` for a search result to be eligible.
     num_matches : int
         Maximum number of matches to return.
-    search_str : str
-        Query to be submitted; will be url quoted before appending to url
     back_days : int
         If specified a `daterange' operator will be appended to the search
         string, restricting the search results to documents that have been
         modified no longer than `back_days` days ago. Note that this will
         also exclude any documents which are lacking date information.
-    search_ops : list of tuples
-        Will be passed to `GoogleSerp` constructor; see
-        `GoogleSerp.__init__` docstring.
+    exact : Boolean
+        If `True` will ignore search results in which Google relaxed the search
+        query (e.g. by removing quotes from phrases).
+    delay : number
+        If `delay > 0` there will be a random delay between 0 and `delay`
+        seconds in between calls to Google. This can be used to mitigate the
+        risk of being blocked by Google.
     search_kwds : dict
         Will be passed to `GoogleSerp` constructor; see
         `GoogleSerp.__init__` docstring.
@@ -613,8 +641,10 @@ def best_matches(wa, sources, search_str, back_days=None, min_wc=0,
         if len(matches) >= num_matches:
             break
         try:
-            sr = SiteResults(src, search_str, back_days=back_days, *search_ops,
-                    **search_kwds)
+            if delay > 0:
+                time.sleep(delay * random.random())
+            sr = SiteResults(src, search_str=search_str, back_days=back_days,
+                    exact=exact, *search_ops, **search_kwds)
         except EmptySearchResult:
             logging.debug("SiteResults: empty search result for %s", src)
             continue
@@ -649,7 +679,7 @@ def get_match(wa, sr, min_wc=0, min_match=0, num_tries=1):
     """
     result = None
     stop = min(num_tries, len(sr.res))
-    for r in sr.res[:num_tries]:
+    for r in sr.res[:stop]:
         url = r['url']
         title = r['title']
         if duplicate_urls(wa.url, url):
