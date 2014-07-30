@@ -496,14 +496,16 @@ class GoogleSerp(object):
 
         # check if Google relaxed query:
         relaxed = parsed.xpath(GoogleSerp._xp_altquery)
-        if relaxed and not len(relaxed) == 2:
-            logging.debug("Google seems to indicate alternative search "
-                          "string for '%s'; unable to parse", query)
-        elif relaxed[0].text_content().lower().startswith("no results found"):
-            if exact:
-                self.resnum = 0
-                raise EmptySearchResult
-            self.alt_query = relaxed[1].xpath('a')[0].text_content()
+        if relaxed:
+            if not len(relaxed) == 2:
+                logging.debug("Google seems to indicate alternative search "
+                              "string for '%s'; unable to parse", query)
+            elif relaxed[0].text_content().lower().startswith(
+                    "no results found"):
+                if exact:
+                    self.resnum = 0
+                    raise EmptySearchResult
+                self.alt_query = relaxed[1].xpath('a')[0].text_content()
 
         pre = GoogleSerp._prefix if self.resnum > 1 else ''
         atags = []
