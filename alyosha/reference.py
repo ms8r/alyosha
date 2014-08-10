@@ -94,8 +94,44 @@ stop_words = frozenset([
 # additional stop words that will only be culled from final search string, i.e.
 # these words are still available to construct "search phrases"
 late_kills = frozenset([
-    'report', 'reported', 'reporting', 'reporting', 'face', 'facing', 'like',
-    'read', 'reads', 'different', 'think', 'thought', 'people', 'big', 'new',
-    'issues', 'issue', 'instance', 'just', 'need', 'best', 'better', 'worst',
-    'lot'
+    'report', 'reported', 'reporting', 'face', 'facing', 'like', 'read',
+    'reads', 'different', 'think', 'thought', 'people', 'big', 'new', 'issues',
+    'issue', 'instance', 'just', 'need', 'best', 'better', 'worst', 'lot'
 ])
+
+
+# maps NLTK POS tags onto WordNet tags for lemmatizing
+# NOTE: not all tags are mapped; looks need to provide default via get
+pos_map = {
+        'JJ': 'a',
+        'JJR': 'a',
+        'JJRJR': 'a',
+        'JJS': 'a',
+        'JJ|RB': 'a',
+        'JJ|VBG': 'a',
+        'MD': 'v',
+        'NN': 'n',
+        'NNP': 'n',
+        'NNPS': 'n',
+        'NNS': 'n',
+        'NN|NNS': 'n',
+        'NN|SYM': 'n',
+        'NN|VBG': 'n',
+        'NP': 'n',
+        'RB': 'r',
+        'RBR': 'r',
+        'RBS': 'r',
+        'RB|RP': 'r',
+        'RB|VBG': 'r',
+        'VB': 'v',
+        'VBD': 'v',
+        'VBD|VBN': 'v',
+        'VBG': 'v',
+        'VBG|NN': 'v',
+        'VBN': 'v',
+        'VBP': 'v',
+        'VBP|TO': 'v',
+        'VBZ': 'v',
+        'VP': 'v',
+        'WRB': 'r'
+}

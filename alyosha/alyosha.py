@@ -11,6 +11,8 @@ from goose import Goose
 from lxml import html
 import numpy as np
 import nltk
+from nltk.collocations import BigramCollocationFinder
+from nltk.metrics import BigramAssocMeasures
 
 import reference as REF
 
@@ -89,17 +91,8 @@ class WebArticle(object):
         `text` as list of lower case strings without punctuation marks.
     wcount : int
         Number of words in cleaned text
-    top_words : list
-        Unique list of words, sorted by descending frequency
-    top_phrases : list
-        Unique list of multi-word phrases, sorted first by length of
-        phrase, then by frequency
-    phrase_overlaps : list
-        List of single words in top_words that also appear as part of a
-        phrase in top_phrases
-    pruned_top_words : list
-        top_words - phrase_overlaps, with original order of top_words
-        retained
+    stem_tops : list
+        list of tuples with stemmed words from wlist and corresponding counts.
 
     Mehtods:
     --------
@@ -125,11 +118,8 @@ class WebArticle(object):
     """
     # file extensions to be excluded (will raise InvalidUrlError):
     exclude_formats = ['pdf', 'doc', 'mp3', 'mp4']
-    # Weight given to phrases when calculating combined match score. The number
-    # of common phrases will be multiplied by this weight and added to
-    # nominator and denominator of the word match score. Not hugely scientific,
-    # but seems to do the trick...
-    _phrase_match_score_weight = 4
+    # stemmer used to normalize words for article comparison
+    stemmer = nltk.stem.SnowballStemmer('english')
 
     def __init__(self, ref_url, stop_words=None, late_kills=None):
         """
@@ -175,123 +165,14 @@ class WebArticle(object):
             logging.debug("could not extract article from %s" % ref_url)
             raise ArticleExtractionError(ref_url)
 
-        def build_wlist(raw_text):
-            raw_text = unicodedata.normalize(
-                    'NFKC', raw_text)
-            # strip punctuation to build word list excluding stop_list
-            raw_text = re.sub(ur'[\u2019]+', u'\'', raw_text)
-            raw_text = re.sub(ur'\'s', '', raw_text)
-            raw_text = re.sub(ur'n\'t', '', raw_text)
-            result = [w.lower() for w in re.findall(ur'\w+', raw_text)]
-            short_num = re.compile(r'0*\d$')
-            return [w for w in result if not w in ['m', 've', 't', 'd'] and
-                    not short_num.match(w)]
-
         self.wlist = build_wlist(self.text)
         self.wcount = len(self.wlist)
         logging.debug("built %d word list for article \"%s\"" %
                 (self.wcount, self.title))
-        no_stop_wlist = [w for w in self.wlist if w not in stop_words]
 
-        def phrase_counts(word_list, phrase_length=2, min_count=0):
-            """
-            Looks for multiple word phrases in text.  Takes `word_list` and
-            checks for repeated occurence of multiple word phrases (e.g.
-            'snowden files').  Returns a list of tuples (phrase, count), sorted
-            by count in descending order.  `phrase_length` indicates how many
-            words should be in a phrase. Only phrases with at least `min_count`
-            occurences in `word_list` will be included in the result.
-            """
-            assert 1 <= phrase_length <= len(word_list)
-            cols = []
-            for i in range(phrase_length):
-                cols.append(word_list[i:])
-            phrases = ([' '.join(c) for c in zip(*cols)])
-            result = Counter(phrases).most_common()
-            return [r for r in result if r[1] >= min_count]
-
-        # get word/phrase counts:
-        wnl = nltk.WordNetLemmatizer()
-        lemma_count = {}
-        for w, c in Counter(no_stop_wlist).most_common():
-            lemma = wnl.lemmatize(w)
-            lemma_count[lemma] = c + lemma_count.setdefault(lemma, 0)
-        lemmatized = [(w, c) for (w, c) in lemma_count.iteritems()]
-        lemmatized.sort(key=lambda t: t[1], reverse=True)
-        self.top_words = [w for w in lemmatized if w[0] not in late_kills]
-        n = min(10, len(self.top_words))
-        min_count = (sum([c[1] for c in self.top_words[:n]]) / float(n)
-                if n > 0 else float('nan'))
-        # NOTE: the 2.5 are a trial-and-error smudge factor
-        min_count = max(3, int(round(min_count / 2.5)))
-        search_term_list = [lemmatized]
-        for i in range(1, len(no_stop_wlist)):
-            terms = phrase_counts(no_stop_wlist, i + 1, min_count=min_count)
-            if not terms:
-                break
-            # only keep phrases that also appear as such in pre-stop-word-kill
-            # text:
-            terms = [t for t in terms if t[0] in ' '.join(self.wlist)]
-            if terms:
-                search_term_list.append(terms)
-
-        # eliminate redundancies (word/shorter phrase contained in longer
-        # phrase):
-        pruned_list = []
-        for short_terms, long_terms in zip(search_term_list[:-1],
-                                           search_term_list[1:]):
-            short_terms = [s for s in short_terms if not s[0] in
-                           ' '.join([t[0] for t in long_terms])]
-            pruned_list.append(short_terms)
-        pruned_list.append(search_term_list[-1])
-
-        phrases = []
-        # iterating in reverse order to put multiple word phrases first
-        # NOTE: reversing no longer required
-        first_element = len(pruned_list) - 1
-        for i, terms in enumerate(reversed(pruned_list)):
-            if i == first_element:
-                pass
-            else:
-                phrases += [t for t in terms]
-
-        self.top_phrases = phrases
-
-    def search_string(self, num_terms=6, use_phrases=True, force_phrases=True):
-        """
-        Returns a search string based on the articles top words and phrases.
-
-        Arguments:
-        ----------
-        num_terms : int
-            Total number of terms (single words and phrases) to be includes in
-            search string.
-        use_phrases : boolean
-            If `False` only single words will be used in search string.
-        force_phrases : boolean
-            If `True`, phrases will be included in quotes.
-
-        Returns:
-        --------
-        A string with space separated search terms. Multiple word phrases will
-        be enclosed in '"' if `force_phrases was set to `True`.
-        """
-        if use_phrases:
-            num_phrases = min(num_terms, len(self.top_phrases))
-            encl = '"' if force_phrases else ''
-            result = ' '.join(['%s%s%s' % (encl, p[0], encl)
-                    for p in self.top_phrases[:num_phrases]])
-            top_words = self.pruned_top_words
-        else:
-            num_phrases = 0
-            result = ""
-            top_words = self.top_words
-        num_words = min(num_terms - num_phrases, len(top_words))
-        if num_words > 0:
-            words = ' '.join([t[0] for t in top_words[:num_words]])
-            result = (result + ' ' + words).lstrip()
-
-        return result
+        sl = [WebArticle.stemmer.stem(w) for w in self.wlist if w not in
+              REF.stop_words.union(REF.late_kills) and len(w) > 2]
+        self.stem_tops = Counter(sl).most_common()
 
     def match_score(self, other, num_words=20):
         """
@@ -300,31 +181,13 @@ class WebArticle(object):
         `num_words` most frequent words from each object's `top_words`
         attribute.
         """
-        num_words = min(num_words, len(self.top_words), len(other.top_words))
-        da = dict(self.top_words[:num_words])
-        db = dict(other.top_words[:num_words])
+        num_words = min(num_words, len(self.stem_tops), len(other.stem_tops))
+        da = dict(self.stem_tops[:num_words])
+        db = dict(other.stem_tops[:num_words])
         voc = list(set(da.keys()) | set(db.keys()))
         a = np.array([[da.get(w, 0), db.get(w, 0)] for w in voc])
         return np.dot(a[:, 0], a[:, 1]) / (np.linalg.norm(a[:, 0]) *
                                            np.linalg.norm(a[:, 1]))
-
-    @property
-    def phrase_overlaps(self):
-        """
-        Provides a list of the words in self.top_words that are also part of a
-        multi-word phrase in self.top_phrases
-        """
-        phrases = [p[0] for p in self.top_phrases]
-        return [w for w in self.top_words if w[0] in ' '.join(phrases)]
-
-    @property
-    def pruned_top_words(self):
-        """
-        Same as self.top_words - self.phrase_overlaps, retaining original order
-        of self.top_words
-        """
-        excludes = self.phrase_overlaps
-        return [w for w in self.top_words if not w in excludes]
 
 
 class GoogleSerp(object):
@@ -588,6 +451,90 @@ class SiteResults(GoogleSerp):
 
         self.site = site
         self.back_days = back_days
+
+
+def build_wlist(raw_text):
+    """
+    Tokenizes raw text into word list.
+    """
+    pattern = r'''(?x)          # set flag to allow verbose regexps
+              ([A-Z]\.)+        # abbreviations, e.g. U.S.A.
+            | \w+(-\w+)*        # words with optional internal hyphens
+            | \$?\d+(\.\d+)?%?  # currency and percentages, e.g. $12.40, 82%
+    '''
+    raw_text = unicodedata.normalize('NFKC', raw_text)
+    raw_text = re.sub(ur'[\u2019]+', u'\'', raw_text)
+    raw_text = re.sub(u'n\'t', u' not', raw_text)
+    raw_text = re.sub(u'\'ve', u' have', raw_text)
+    return [w.lower() for w in nltk.regexp_tokenize(raw_text, pattern)]
+
+
+def search_string(wlist, num_terms=6, use_phrases=True, force_phrases=True):
+    """
+    Returns a search string based on the articles top words and phrases.
+
+    Arguments:
+    ----------
+    wlist : list
+        Complete word lis representing the underlying text (before stop word
+        removal or other pruning).
+    num_terms : int
+        Total number of terms (single words and phrases) to be includes in
+        search string.
+    use_phrases : boolean
+        If `False` only single words will be used in search string.
+    force_phrases : boolean
+        If `True`, phrases will be included in quotes.
+
+    Returns:
+    --------
+    A string with space separated search terms. Multiple word phrases will
+    be enclosed in '"' if `force_phrases was set to `True`.
+    """
+    wnl = nltk.WordNetLemmatizer()
+    tagged = [(w, REF.pos_map.get(t, 'n')) for w, t in nltk.pos_tag(wlist)
+              if w not in REF.stop_words.union(REF.late_kills)]
+    lemmas = [wnl.lemmatize(*t) for t in tagged]
+    num_phrases = 0
+    result = ""
+    top_words = [w for w, c in Counter(lemmas).most_common()]
+    if use_phrases:
+        bcf = BigramCollocationFinder.from_words(lemmas)
+        # NOTE: number of phrases currently hard coded to max. 2
+        phrases = bcf.nbest(BigramAssocMeasures.likelihood_ratio, 2)
+        phrases = [' '.join(p) for p in phrases]
+        phrases = [p for p in phrases if p in ' '.join(wlist)]
+        if phrases:
+            num_phrases = min(num_terms, len(phrases))
+            encl = '"' if force_phrases else ''
+            result = ' '.join(['%s%s%s' % (encl, p, encl)
+                    for p in phrases[:num_phrases]])
+            top_words = [w for w in top_words if w not in
+                         ' '.join(phrases[:num_phrases])]
+    num_words = min(num_terms - num_phrases, len(top_words))
+    if num_words > 0:
+        words = ' '.join([t for t in top_words[:num_words]])
+        result = (result + ' ' + words).lstrip()
+
+    return result
+
+
+def phrase_counts(word_list, phrase_length=2, min_count=0):
+    """
+    Looks for multiple word phrases in text.  Takes `word_list` and
+    checks for repeated occurence of multiple word phrases (e.g.
+    'snowden files').  Returns a list of tuples (phrase, count), sorted
+    by count in descending order.  `phrase_length` indicates how many
+    words should be in a phrase. Only phrases with at least `min_count`
+    occurences in `word_list` will be included in the result.
+    """
+    assert 1 <= phrase_length <= len(word_list)
+    cols = []
+    for i in range(phrase_length):
+        cols.append(word_list[i:])
+    phrases = ([' '.join(c) for c in zip(*cols)])
+    result = Counter(phrases).most_common()
+    return [r for r in result if r[1] >= min_count]
 
 
 def best_matches(wa, sources, search_str, back_days=None,
