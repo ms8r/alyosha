@@ -174,6 +174,80 @@ class WebArticle(object):
               REF.stop_words.union(REF.late_kills) and len(w) > 2]
         self.stem_tops = Counter(sl).most_common()
 
+    def search_string(self, num_terms=6, use_phrases=True,
+            force_phrases=True):
+        """
+        Returns a search string based on the articles top words and phrases.
+
+        Arguments:
+        ----------
+        num_terms : int
+            Total number of terms (single words and phrases) to be includes in
+            search string.
+        use_phrases : boolean
+            If `False` only single words will be used in search string.
+        force_phrases : boolean
+            If `True`, phrases will be included in quotes.
+
+        Returns:
+        --------
+        A string with space separated search terms. Multiple word phrases will
+        be enclosed in '"' if `force_phrases was set to `True`.
+        Will also assign the attributes `_lemmas', `_top_words`, and `_phrases`
+        if these do not exist yet.
+        """
+        try:
+            getattr(self, '_lemmas')
+        except AttributeError:
+            self._make_lemmas()
+        try:
+            getattr(self, '_top_words')
+        except AttributeError:
+            self._top_words = [w for w, c in
+                    Counter(self._lemmas).most_common() if w not in
+                    REF.late_kills]
+        num_phrases = 0
+        result = ""
+        words = self._top_words
+        if use_phrases:
+            try:
+                getattr(self, '_phrases')
+            except AttributeError:
+                self._find_phrases(num_phrases=2)
+            if self._phrases:
+                num_phrases = min(num_terms, len(self._phrases))
+                encl = '"' if force_phrases else ''
+                result = ' '.join(['%s%s%s' % (encl, p, encl)
+                        for p in self._phrases[:num_phrases]])
+                words = [w for w in words if w not in
+                         ' '.join(self._phrases[:num_phrases])]
+        num_words = min(num_terms - num_phrases, len(words))
+        if num_words > 0:
+            words = ' '.join([t for t in words[:num_words]])
+            result = (result + ' ' + words).lstrip()
+
+        return result
+
+    def _find_phrases(self, num_phrases=None):
+        try:
+            getattr(self, '_lemmas')
+        except AttributeError:
+            self._make_lemmas()
+        bcf = BigramCollocationFinder.from_words(self._lemmas)
+        phrases = bcf.nbest(BigramAssocMeasures.likelihood_ratio, num_phrases)
+        phrases = [' '.join(p) for p in phrases]
+        self._phrases = [p for p in phrases if p in ' '.join(self.wlist)]
+
+    def _make_lemmas(self):
+        """
+        Builds and stores lemmatized word list based on `self.wlist` and
+        `REF.stop_words`. Result will be assigned to `self.lemmas`.
+        """
+        wnl = nltk.WordNetLemmatizer()
+        tagged = [(w, REF.pos_map.get(t, 'n')) for w, t in
+                  nltk.pos_tag(self.wlist) if w not in REF.stop_words]
+        self._lemmas = [wnl.lemmatize(*t) for t in tagged]
+
     def match_score(self, other, num_words=20):
         """
         Determine "content proximity" between two `WebArticle` as the cosine
@@ -467,56 +541,6 @@ def build_wlist(raw_text):
     raw_text = re.sub(u'n\'t', u' not', raw_text)
     raw_text = re.sub(u'\'ve', u' have', raw_text)
     return [w.lower() for w in nltk.regexp_tokenize(raw_text, pattern)]
-
-
-def search_string(wlist, num_terms=6, use_phrases=True, force_phrases=True):
-    """
-    Returns a search string based on the articles top words and phrases.
-
-    Arguments:
-    ----------
-    wlist : list
-        Complete word lis representing the underlying text (before stop word
-        removal or other pruning).
-    num_terms : int
-        Total number of terms (single words and phrases) to be includes in
-        search string.
-    use_phrases : boolean
-        If `False` only single words will be used in search string.
-    force_phrases : boolean
-        If `True`, phrases will be included in quotes.
-
-    Returns:
-    --------
-    A string with space separated search terms. Multiple word phrases will
-    be enclosed in '"' if `force_phrases was set to `True`.
-    """
-    wnl = nltk.WordNetLemmatizer()
-    tagged = [(w, REF.pos_map.get(t, 'n')) for w, t in nltk.pos_tag(wlist)
-              if w not in REF.stop_words.union(REF.late_kills)]
-    lemmas = [wnl.lemmatize(*t) for t in tagged]
-    num_phrases = 0
-    result = ""
-    top_words = [w for w, c in Counter(lemmas).most_common()]
-    if use_phrases:
-        bcf = BigramCollocationFinder.from_words(lemmas)
-        # NOTE: number of phrases currently hard coded to max. 2
-        phrases = bcf.nbest(BigramAssocMeasures.likelihood_ratio, 2)
-        phrases = [' '.join(p) for p in phrases]
-        phrases = [p for p in phrases if p in ' '.join(wlist)]
-        if phrases:
-            num_phrases = min(num_terms, len(phrases))
-            encl = '"' if force_phrases else ''
-            result = ' '.join(['%s%s%s' % (encl, p, encl)
-                    for p in phrases[:num_phrases]])
-            top_words = [w for w in top_words if w not in
-                         ' '.join(phrases[:num_phrases])]
-    num_words = min(num_terms - num_phrases, len(top_words))
-    if num_words > 0:
-        words = ' '.join([t for t in top_words[:num_words]])
-        result = (result + ' ' + words).lstrip()
-
-    return result
 
 
 def phrase_counts(word_list, phrase_length=2, min_count=0):
