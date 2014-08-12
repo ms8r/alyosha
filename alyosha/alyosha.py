@@ -199,7 +199,7 @@ class WebArticle(object):
         try:
             getattr(self, '_lemmas')
         except AttributeError:
-            self._make_lemmas()
+            self._make_lemmas(min_char=2)
         try:
             getattr(self, '_top_words')
         except AttributeError:
@@ -238,14 +238,16 @@ class WebArticle(object):
         phrases = [' '.join(p) for p in phrases]
         self._phrases = [p for p in phrases if p in ' '.join(self.wlist)]
 
-    def _make_lemmas(self):
+    def _make_lemmas(self, min_char=2):
         """
         Builds and stores lemmatized word list based on `self.wlist` and
-        `REF.stop_words`. Result will be assigned to `self.lemmas`.
+        `REF.stop_words`, including only words with at least `min_char`
+        characters. Result will be assigned to `self.lemmas`.
         """
         wnl = nltk.WordNetLemmatizer()
         tagged = [(w, REF.pos_map.get(t, 'n')) for w, t in
-                  nltk.pos_tag(self.wlist) if w not in REF.stop_words]
+                  nltk.pos_tag(self.wlist) if w not in REF.stop_words and
+                  len(w) >= min_char]
         self._lemmas = [wnl.lemmatize(*t) for t in tagged]
 
     def match_score(self, other, num_words=20):
