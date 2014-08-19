@@ -1,3 +1,4 @@
+# TODO: rewrite exception catchers (except (...) as ...)
 import random
 import re
 import logging
@@ -573,7 +574,7 @@ def best_matches(wa, sources, search_str, back_days=None,
     Arguments:
     ---------
     wa : WebArticle object
-        Reference artticle against which to match results.
+        Reference article against which to match results.
         WebArticle.match_score() will be used to evaluate content match.
     sources : sequence
         List of strings with sites to search. Sites will be searched in order
@@ -612,12 +613,15 @@ def best_matches(wa, sources, search_str, back_days=None,
     keys are 'src', 'wc', 'score', 'title', 'url', 'link', 'desc'.
     """
     matches = []
+    discards = []
     for src in sources:
         if len(matches) >= num_matches:
             break
         try:
             if delay > 0:
                 time.sleep(delay * random.random())
+            # TODO: SiteResult cutoff_date attrib that can be used to filter
+            # matches
             sr = SiteResults(src, search_str=search_str, back_days=back_days,
                     exact=exact, *search_ops, **search_kwds)
         except EmptySearchResult:
@@ -630,29 +634,33 @@ def best_matches(wa, sources, search_str, back_days=None,
             logging.debug("SiteResults: PageRetrievalError for %s", src)
             continue
         logging.debug("%s: found %d matches", src, sr.resnum)
-        # NOTE: num_matches guesstimated (look at no more than two hits per
+        # NOTE: num_tries guesstimated (look at no more than three hits per
         # source)
-        m = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
-                num_tries=2)
-        if m:
-            logging.debug("found match with score %.3f: %s from %s",
-                    m['score'], m['title'], m['src'])
-            matches.append(m)
+        m, d = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
+                num_tries=3)
+        matches += m
+        discards += d
+        logging.debug("found %d match(es) and %d discard(s) at %s",
+                len(m), len(d), src)
 
-    return sorted(matches, key=lambda k: k['score'], reverse=True)
+    return (sorted(matches, key=lambda k: k['score'], reverse=True),
+            sorted(discards, key=lambda k: k['score'], reverse=True))
 
 
-def get_match(wa, sr, min_wc=0, min_match=0, num_tries=1):
+def get_match(wa, sr, min_wc=0, min_match=0, num_matches=1, num_tries=10):
     """
-    Will try to retrieve a match from SiteResult object `sr` with a minimum
-    length of `min_wc` words and a minimum content match of `min_match` against
-    WebArticle object `wa`. Will try at most `num_tries` elements in `sr` to
-    produce a match.
+    Will try to retrieve up to `num_matches` a match from SiteResult object
+    `sr` with a minimum length of `min_wc` words and a minimum content match of
+    `min_match` against WebArticle object `wa`. Will try at most `num_tries`
+    elements in `sr` to produce a match.
 
-    Returns a dict with the match if found or None otherwise. Dict keys are
-    'src', 'wc', 'score', 'title', 'url', 'link', 'desc'.
+    Returns a tuple `(m, d)` where `m` is a list of dicts with the matches (if
+    any), and `d` is a list of dicts for the items that were discarded because
+    of an insufficient content match. Dict keys are 'src', 'wc', 'score',
+    'title', 'url', 'link', 'desc'.
     """
-    result = None
+    matches = []
+    discards = []
     stop = min(num_tries, len(sr.res))
     for r in sr.res[:stop]:
         url = r['url']
@@ -672,15 +680,18 @@ def get_match(wa, sr, min_wc=0, min_match=0, num_tries=1):
             continue
         match_score = wa.match_score(wb, num_words=20)
         if match_score >= min_match:
-            result = {'src': sr.site, 'wc': wb.wcount, 'score': match_score,
-                    'title': title, 'url': url, 'link': r['link'], 'desc':
-                    r['desc']}
-            break
+            matches.append({'src': sr.site, 'wc': wb.wcount, 'score':
+                    match_score, 'title': title, 'url': url, 'link': r['link'],
+                    'desc': r['desc']})
+            if len(matches) >= num_matches:
+                break
         else:
-            logging.debug("dicarding \"%s\" from %s with score %.3f", title,
-                    sr.site, match_score)
+            discards.append({'src': sr.site, 'wc': wb.wcount, 'score':
+                    match_score, 'title': title, 'url': url, 'link': r['link'],
+                    'desc': r['desc']})
 
-    return result
+    return (sorted(matches, key=lambda k: k['score'], reverse=True),
+            sorted(discards, key=lambda k: k['score'], reverse=True))
 
 
 def duplicate_urls(url1, url2):
