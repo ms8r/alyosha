@@ -1,4 +1,5 @@
 # TODO: rewrite exception catchers (except (...) as ...)
+import pdb
 import random
 import re
 import logging
@@ -326,7 +327,7 @@ class GoogleSerp(object):
         ----------
         search_ops : list of 2-item tuples
             Each element must be a `(option, value)` combination with `option`
-            being a search option recognized by Google. The can be used for
+            being a search option recognized by Google. The tuples can be used for
             options that can be repeated in a query (e.g. 'ext') and therefore
             don't fit into search_kwds.
         search_kwds : keyword argument dict
@@ -501,14 +502,15 @@ class SiteResults(GoogleSerp):
             Will be passed to `GoogleSerp` constructor; see
             `GoogleSerp.__init__` docstring.
         search_kwds : dict
-            Will look for keyword `back_days` which, if present, will restrict
-            the search results to documents that have been modified no longer
-            than `back_days` days ago. Note that this will also exclude any
-            documents which are lacking date information., The value mapped to
-            `back_days` will be converted to a `daterange` search argument and
-            `back_days` will be replaced by `daterange` in `search_kwds` All
-            other keyword arguments will be passed straight to the `GoogleSerp`
-            constructor. See `GoogleSerp.__init__` docstring for more info.
+            Will look for keyword `back_days` which, if present with a value >
+            0, will restrict the search results to documents that have been
+            modified no longer than `back_days` days ago. Note that this will
+            also exclude any documents which are lacking date information. The
+            value mapped to `back_days` will be converted to a `daterange`
+            search argument and `back_days` will be replaced by `daterange` in
+            `search_kwds` All other keyword arguments will be passed straight
+            to the `GoogleSerp` constructor. See `GoogleSerp.__init__`
+            docstring for more info.
         """
         if not search_ops:
             search_ops = []
@@ -517,12 +519,13 @@ class SiteResults(GoogleSerp):
             search_kwds = {}
         search_kwds['site'] = site
         back_days = search_kwds.get('back_days', None)
-        if back_days:
+        if 'back_days' in search_kwds:
             del search_kwds['back_days']
-            now = date.today()
-            then = now - timedelta(days=back_days)
-            search_kwds['daterange'] = (then.isoformat() + '..' +
-                                        now.isoformat())
+            if back_days:
+                now = date.today()
+                then = now - timedelta(days=back_days)
+                search_kwds['daterange'] = (then.isoformat() + '..' +
+                                            now.isoformat())
 
         super(SiteResults, self).__init__(*search_ops, **search_kwds)
 
@@ -637,7 +640,7 @@ def best_matches(wa, sources, search_str, back_days=None,
         # NOTE: num_tries guesstimated (look at no more than three hits per
         # source)
         m, d = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
-                num_tries=3)
+                num_matches=1, num_tries=3)
         matches += m
         discards += d
         logging.debug("found %d match(es) and %d discard(s) at %s",

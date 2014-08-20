@@ -8,21 +8,33 @@ $code:
     # max. number of results to show per category:
     max_res = 3
 
-$def cat_res(cr, max_res):
-    $if not cr:
-        <p>No results found in this category</p>
+$def render_res(r):
+    $code:
+        score = "%.2f" % r['score']
+
+    <h3><a href="$r['url']">$r['title']</a></h2>
+    <h4>$r['link']</h3>
+    <p class="match-score">$r['wc'] words, score: $score</p>
+    <p class="res-description">$r['desc']</p>
+    
+
+$def cat_res(c_matches, c_discards, max_res):
+    $if not c_matches:
+        <p><em>No full matches found in this category</em></p>
     $else:
         $code:
-            m = min(max_res, len(cr))
+            n = min(max_res, len(c_matches))
 
-        $for r in cr[:m]:
-            $code:
-                score = "%.2f" % r['score']
+        $for r in c_matches[:n]:
+            $:render_res(r)
 
-            <h3><a href="$r['url']">$r['title']</a></h2>
-            <h4>$r['link']</h3>
-            <p class="match-score">$r['wc'] words, score: $score</p>
-            <p class="res-description">$r['desc']</p>
+    $if c_discards:
+        <p><em>Articles that failed to meet the full match criteria</em></p>
+        $code:
+            n = min(max_res, len(c_discards))
+
+        $for r in c_discards[:n]:
+            $:render_res(r)
 
 
 $if results:
@@ -35,15 +47,15 @@ $if results:
     <div id="results-main_wrapper">
     <div id="results-left" class="results-column">
         <h2>On the left...</h2>
-        $:cat_res(results['left'], max_res)
+        $:cat_res(*results['left'], max_res=max_res)
     </div>
     <div id="results-center" class="results-column">
         <h2>...in the center...</h2>
-        $:cat_res(results['center'], max_res)
+        $:cat_res(*results['center'], max_res=max_res)
     </div>
     <div id="results-right" class="results-column">
         <h2>...and on the right</h2>
-        $:cat_res(results['right'], max_res)
+        $:cat_res(*results['right'], max_res=max_res)
     </div>
     </div>
 

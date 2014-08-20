@@ -12,7 +12,7 @@ MIN_WC = 400
 # Minimum match score for search result to be eligible
 MIN_MATCH = 0.3
 # Number of results per catergory (left-center-right)
-NUM_MATCHES = 1
+NUM_MATCHES = 2
 # Cut-off for source site's quality weight to be included in search (heavy
 # sinks to bottom, [0, 100]
 MAX_QUALITY_WEIGHT = 45
@@ -142,11 +142,13 @@ class results(object):
                        if (rng[0] <= t[1] < rng[1]) and t[2] <=
                        MAX_QUALITY_WEIGHT]
             sources = [t[1] for t in sorted(sources)]
+            # Note: each `results` entry will be a tuple (m, d) with m being a
+            # list of matches and d being a list of discards
             results[cat] = al.best_matches(wa, sources, search_str,
                     back_days=int(i.back_days), min_wc=MIN_WC,
                     min_match=MIN_MATCH, num_matches=NUM_MATCHES,
                     exact=False, delay=GOOGLE_DELAY, allintext=False)
-            logging.debug("%s: %d ranked results", cat, len(results[cat]))
+            logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
 
         return render.results(wa, search_str, results, '/request')
 
