@@ -1,27 +1,60 @@
-$def with (formDict)
+$def with (formDict, src_cats, ref_title, ref_url)
 
-$var title: Foxes, not Hedgehogs - Your Specs
+$var title: Thify search specs
 
 $var cssfiles: static/styles.css
 
 <form name="main" method="post">
 
-<h1>If you find this interesting...</h1>
+<h2>Search parameters based on <em>"<a href="$ref_url">$ref_title</a>"</em></h2>
 
-<h2 class="formheader">Enter URL of the article you wish to search additional sources for</h2>
-$if not formDict['url'].valid:
+<h3 class="formheader">Pick a search string to be used</h3>
+$if not formDict['search_strings'].valid:
     <p class="error">Try again, AmeriCAN</p>
-$:formDict['url'].render()
-
-<h2 class="formheader">Select if multi-word phrases are to be used in the search string</h2>
-<p><em>Note: if 'Force phrases' is selected, phrases will be enclosed in quotes in the search string.</em></p>
-$if not formDict['phrases'].valid:
+<div class="search-strings">
+    $:formDict['search_strings'].render()
+</div>
+<p><em>...or roll your own:</em></p>
+$if not formDict['cust_search_str'].valid:
     <p class="error">Try again, AmeriCAN</p>
-$:formDict['phrases'].render()
+$:formDict['cust_search_str'].render()
 
-<h2 class="formheader">Select how many months into the past you want the search to extend</h2>
+<h3 class="formheader">Select the sources to be searched</h3>
+<table>
+    <thead>
+        <tr>
+        $for c in src_cats:
+            $if loop.first:
+                $ label = "On the {0}...".format(c)
+            $elif loop.last:
+                $ label = "...and on the {0}".format(c)
+            $else:
+                $ label = "...in the {0}".format(c)
+            
+            <th>$label</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+        $for f in formDict['src_by_cat']:
+            <td>
+            $:f.render()
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+$:formDict['match_score'].render()
+</p>
+
+<p>
+$:formDict['min_wc'].render()
+</p>
+
+<h3 class="formheader">Select how many months into the past you want the search to extend</h3>
 <p><em>Note: select '0' if you don't want to restrict the date range.</em></p>
-$if not formDict['phrases'].valid:
+$if not formDict['date_range'].valid:
     <p class="error">Try again, AmeriCAN</p>
 $:formDict['date_range'].render()
 

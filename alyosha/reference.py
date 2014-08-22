@@ -1,38 +1,91 @@
-# TODO: complete priority ranking
+from collections import namedtuple
+from collections import OrderedDict
+
 # tuple has: site, 'right'..'left' score (-1, 1), and priority/weight
 # (heavy sinks to botom)
-source_sites = {
+SrcEntry = namedtuple('SrcEntry', ['site', 'specVal', 'weight', 'label', 'id'])
+
+# source grouping: intervals below are open on the left
+src_cats = OrderedDict([
+        ('left', (0.5, 1.0)),
+        ('center', (-0.5, 0.5)),
+        ('right', (-1.0, -0.5)),
+])
+
+source_sites = [
         # right outfield:
-        'Townhall': ('townhall.com', -0.9, 90),
-        'FoxNews': ('foxnews.com', -0.7, 60),
-        'The Weekly Standard': ('weeklystandard.com', -0.7, 50),
-        'National Review': ('nationalreview.com', -0.6, 40),
-        'EconLib': ('econlib.org', -0.6, 30),
+        SrcEntry('townhall.com', -0.9, 90, 'Townhall', 'townhall'),
+        SrcEntry('foxnews.com', -0.7, 60, 'FoxNews', 'foxnews'),
+        SrcEntry('weeklystandard.com', -0.7, 50, 'The Weekly Standard', 'weeklystandard'),
+        SrcEntry('nationalreview.com', -0.6, 40, 'National Review', 'nationalreview'),
+        SrcEntry('econlib.org', -0.6, 30, 'EconLib', 'econlib'),
         # right center:
-        'Hoover Institution': ('hoover.org', -0.4, 30),
+        SrcEntry('hoover.org', -0.4, 30, 'Hoover Institution', 'hoover'),
         # FT blocks with registration page
-        # 'Financial Times': ('ft.com', -0.3, 25),
-        'WSJ': ('wsj.com', -0.3, 20),
-        'The Economist': ('economist.com', -0.3, 15),
-        'Lawfare': ('lawfareblog.com', -0.2, 35),
-        'Christian Science Monitor': ('csmonitor.com', -0.1, 5),
-        'FiveThirtyEight': ('fivethirtyeight.com', -0.1, 15),
+        # SrcEntry('ft.com', -0.3, 25, # 'Financial Times', 'ft.com'),
+        SrcEntry('wsj.com', -0.3, 20, 'WSJ', 'wsj'),
+        SrcEntry('economist.com', -0.3, 15, 'The Economist', 'economist'),
+        SrcEntry('lawfareblog.com', -0.2, 35, 'Lawfare', 'lawfareblog'),
+        SrcEntry('csmonitor.com', -0.1, 5, 'Christian Science Monitor', 'csmonitor'),
+        SrcEntry('fivethirtyeight.com', -0.1, 15, 'FiveThirtyEight', 'fivethirtyeight'),
         # left center:
-        'FactCheck': ('factcheck.org', 0.1, 50),
-        'The Guardian': ('theguardian.com', 0.4, 25),
-        'Der Spiegel': ('spiegel.de', 0.2, 30),
-        'Brookings': ('brookings.edu', 0.2, 25),
-        'The Atlantic': ('theatlantic.com', 0.2, 30),
-        'Slate Magazine': ('slate.com', 0.4, 40),
-        'Washington Post': ('washingtonpost.com', 0.2, 15),
-        'New York Times': ('nytimes.com', 0.2, 15),
+        SrcEntry('factcheck.org', 0.1, 50, 'FactCheck', 'factcheck'),
+        SrcEntry('theguardian.com', 0.4, 25, 'The Guardian', 'theguardian'),
+        SrcEntry('spiegel.de', 0.2, 30, 'Der Spiegel', 'spiegel'),
+        SrcEntry('brookings.edu', 0.2, 25, 'Brookings', 'brookings'),
+        SrcEntry('theatlantic.com', 0.2, 30, 'The Atlantic', 'theatlantic'),
+        SrcEntry('slate.com', 0.4, 40, 'Slate Magazine', 'slate'),
+        SrcEntry('washingtonpost.com', 0.2, 15, 'Washington Post', 'washingtonpost'),
+        SrcEntry('nytimes.com', 0.2, 15, 'New York Times', 'nytimes'),
         # left outfield:
-        'MNBC': ('msnbc.com', 0.6, 50),
-        'Mother Jones': ('motherjones.com', 0.7, 30),
-        'Huffington Post': ('huffingtonpost.com', 0.6, 45),
-        'Daily Kos': ('dailykos.com', 0.7, 40),
-        'The Nation': ('thenation.com', 0.9, 35),
-}
+        SrcEntry('msnbc.com', 0.6, 50, 'MNBC', 'msnbc'),
+        SrcEntry('motherjones.com', 0.7, 30, 'Mother Jones', 'motherjones'),
+        SrcEntry('huffingtonpost.com', 0.6, 45, 'Huffington Post', 'huffingtonpost'),
+        SrcEntry('dailykos.com', 0.7, 40, 'Daily Kos', 'dailykos'),
+        SrcEntry('thenation.com', 0.9, 35, 'The Nation', 'thenation'),
+]
+
+def cat_sources(category, max_weight=100, sites_only=False, sort_by='weight',
+        reverse=False, mask=None):
+    """
+    Returns a list of sources for `category`, including only itmes with a
+    quality weight <= `max_weight`.
+
+    Arguments:
+    ----------
+    category : str
+        One of 'right', 'center', 'left'.
+    max_weight : number
+        Quality rating cut-off; only items with a quality weight <=
+        `max_weight` will be included in the result.
+    sites_only : boolean
+        If `True` the returned list will only consist of the sources' site
+        strings. Otherwise the full `SrcEntry` tuples will be included in the
+        list.
+    sort_by : str
+        Attribute by which sort result.
+    reverse : boolean
+        Sort order will be reversed if `True` (i.e. descending).
+    mask : boolean list
+        If specified, only sources for which the corresponding item in mask
+        evaluates to `True` will be included in the result.
+
+    Returns:
+    --------
+    List of `SrcEntry` named tuples if `urls_only==False`, list of `site`strings
+    otherwise.
+    """
+    if not mask:
+        mask = [True] * len(source_sites)
+    lb, ub = src_cats[category]
+    sources = [t for m, t in zip(mask, source_sites) if m and
+               (lb <= t.specVal < ub) and t.weight <= max_weight]
+    sources.sort(key=lambda k: getattr(k, sort_by), reverse=reverse)
+    if sites_only:
+        sources = [t.site for t in sources]
+
+    return sources
+
 
 # user agents tuple taken from howdoi:
 user_agents = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/20100101 Firefox/11.0',

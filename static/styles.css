@@ -21,8 +21,7 @@ body
   box-sizing: border-box;
 }
 
-
-/* column layour for results page */
+/* column layout for results page */
 #results-main-wrapper {
 	clear: both;
 	display: inline;/* IE double margin fix. Feel free to move this to your IE specific stylesheets. */

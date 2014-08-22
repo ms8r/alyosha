@@ -156,9 +156,9 @@ class WebArticle(object):
             result = requests.get(ref_url, headers={'User-Agent':
                     random.choice(REF.user_agents)}, proxies=_get_proxies())
         except requests.exceptions.RequestException:
-            raise PageRetrievalError
+            raise PageRetrievalError(ref_url)
         if not result.status_code == requests.codes.ok:
-            raise PageRetrievalError
+            raise PageRetrievalError(ref_url)
 
         article = Goose().extract(raw_html=result.text)
         self.title = article.title
@@ -353,12 +353,9 @@ class GoogleSerp(object):
             del search_kwds['search_str']
         try:
             self.search(search_str, *search_ops, **search_kwds)
-        except EmptySearchResult:
-            raise
-        except ResultParsingError:
-            raise
-        except PageRetrievalError:
-            raise
+        except (EmptySearchResult, ResultParsingError,
+                PageRetrievalError) as e:
+            raise e
 
     def search(self, search_str, *search_ops, **search_kwds):
         """
@@ -422,9 +419,9 @@ class GoogleSerp(object):
                     url_quote(query)), headers={'User-Agent':
                     random.choice(REF.user_agents)}, proxies=_get_proxies())
         except requests.exceptions.RequestException:
-            raise PageRetrievalError
+            raise PageRetrievalError(query)
         if not result.status_code == requests.codes.ok:
-            raise PageRetrievalError
+            raise PageRetrievalError(query)
         parsed = html.fromstring(result.text)
 
         try:
@@ -445,7 +442,7 @@ class GoogleSerp(object):
                     "no results found"):
                 if exact:
                     self.resnum = 0
-                    raise EmptySearchResult
+                    raise EmptySearchResult(query)
                 self.alt_query = relaxed[1].xpath('a')[0].text_content()
 
         pre = GoogleSerp._prefix if self.resnum > 1 else ''
@@ -455,7 +452,7 @@ class GoogleSerp(object):
         if not atags:
             logging.info("could not find any search results, "
                          "raising EmptySearchResult")
-            raise EmptySearchResult
+            raise EmptySearchResult(query)
 
         titles = [a.text_content() for a in atags]
         urls = [a.attrib['href'] for a in atags]
@@ -464,7 +461,10 @@ class GoogleSerp(object):
         descs = [c.text_content() for c in parsed.xpath(pre +
                                                         GoogleSerp._xp_desc)]
         if not len(titles) == len(links) == len(descs) == len(urls):
-            raise ResultParsingError
+            logging.debug("Error parsing results for query '%s': %d titles, "
+                    "%d links, %d descriptions, %d URLs", query, len(titles),
+                    len(links), len(descs), len(urls))
+            raise ResultParsingError(query)
         dates = [GoogleSerp._date_re.match(d) for d in descs]
         for i, d in enumerate(dates):
             dates[i] = (dt.strptime(d.group(), '%b %d, %Y').date()
@@ -627,14 +627,9 @@ def best_matches(wa, sources, search_str, back_days=None,
             # matches
             sr = SiteResults(src, search_str=search_str, back_days=back_days,
                     exact=exact, *search_ops, **search_kwds)
-        except EmptySearchResult:
-            logging.debug("SiteResults: empty search result for %s", src)
-            continue
-        except ResultParsingError:
-            logging.debug("SiteResults: parsing error for %s", src)
-            continue
-        except PageRetrievalError:
-            logging.debug("SiteResults: PageRetrievalError for %s", src)
+        except (EmptySearchResult, ResultParsingError,
+                PageRetrievalError) as e:
+            logging.debug("SiteResults: %s: %s", type(e), e.message)
             continue
         logging.debug("%s: found %d matches", src, sr.resnum)
         # NOTE: num_tries guesstimated (look at no more than three hits per

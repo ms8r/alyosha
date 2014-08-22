@@ -10,12 +10,12 @@ from alyosha import reference as REF
 # Minimum word count for search result to be eligible
 MIN_WC = 400
 # Minimum match score for search result to be eligible
-MIN_MATCH = 0.3
+MIN_MATCH = 0.4
 # Number of results per catergory (left-center-right)
 NUM_MATCHES = 2
 # Cut-off for source site's quality weight to be included in search (heavy
 # sinks to bottom, [0, 100]
-MAX_QUALITY_WEIGHT = 45
+MAX_QUALITY_WEIGHT = 50
 # Max. wait (in seconds) in between calls to Google:
 GOOGLE_DELAY = 1
 
@@ -35,62 +35,123 @@ urlForm = form.Form(
         form.Textbox('URL', form.notnull, description='Reference URL'),
         class_='urlform')
 
-searchPhrasesForm = form.Form(
-        form.Checkbox('Use phrases'),
-        form.Checkbox('Force phrases'))
-
 dateRangeForm = form.Form(
-        form.Dropdown('Months in past', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], value=0))
+        form.Dropdown('backMonths', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            value=0, description="Months in past"))
+
+custSearchStrForm = form.Form(
+        form.Textbox('custSearchStr', description='', class_='custSearchStrForm')
+)
+
+# construct the source checkboxes:
+srcSitesForms = []
+for cat in REF.src_cats:
+    cs = REF.cat_sources(cat)
+    cbForms = [form.Checkbox(c.id, checked=(c.weight <= MAX_QUALITY_WEIGHT),
+            value=c.site, description=c.label) for c in cs]
+    srcSitesForms.append(form.Form(*cbForms))
+
+matchScoreForm = form.Form(
+        form.Textbox('matchScore', description='Desired content match [%]:',
+            value=int(MIN_MATCH * 100))
+)
+
+minWcForm = form.Form(
+        form.Textbox('minWC', description='Minimum word count:',
+            value=MIN_WC)
+)
 
 formDict = {
-        'url': urlForm,
-        'phrases': searchPhrasesForm,
         'date_range': dateRangeForm,
+        'cust_search_str': custSearchStrForm,
+        'src_by_cat': srcSitesForms,
+        'match_score': matchScoreForm,
+        'min_wc': minWcForm
 }
 
-# source grouping: intervals below are open on the left
-src_cats = {
-        'right': (-1.0, -0.5),
-        'center': (-0.5, 0.5),
-        'left': (0.5, 1.0)
-}
+# for now a global to maintain WebArticle object across pages
+wa = None
 
 
 class index(object):
 
     def GET(self):
-        return render.index('/request')
+        return render.index(urlForm)
+
+    def POST(self):
+        global wa
+        if not urlForm.validates():
+            return render.index(urlForm)
+        form_data = web.input()
+        parsed = urlparse(form_data['URL'])
+        scheme = parsed[0] if parsed[0] else 'http'
+        # ignore any parameters in url:
+        ref_url = scheme + '://' + parsed[1] + parsed[2]
+
+        params = {'url': ref_url}
+        raise web.seeother('/request?' + urlencode(params), '/')
 
 
 class error(object):
 
     def GET(self):
-        i = web.input(msg='', back_link='/index')
+        i = web.input(msg='', back_link='/')
         return render.error(i.msg, i.back_link)
 
 
 class request(object):
 
     def GET(self):
-        return render.request(formDict)
+
+        global wa
+
+        i = web.input(url='', back_link='/')
+        try:
+            wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
+            logging.debug("article '%s' (%d words) at url='%s'",
+                    wa.title, wa.wcount, wa.url)
+        except (al.ArticleFormatError, al.ArticleExtractionError,
+                al.InvalidUrlError, al.PageRetrievalError) as e:
+            params = {
+                    'msg': "%s: %s" % (type(e), e.message),
+                    'back_link': '/request'
+            }
+            raise web.seeother('/error?' + urlencode(params))
+        # need to de-dupe search_strings in case no phrases are found
+        search_str_opts = [
+                {'use_phrases': False, 'force_phrases': False},
+                {'use_phrases': True, 'force_phrases': False},
+                {'use_phrases': True, 'force_phrases': True}
+        ]
+        search_str_choices = list(dedupe([wa.search_string(num_terms=6, **sso)
+                                          for sso in search_str_opts]))
+        # set "no phrases" search string as default:
+        radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
+                description='', value=search_str_choices[0])]
+        # add remaining search string options (if any)
+        radio_buttons += [form.Radio('SearchStr', [ssc], description='')
+                for ssc in search_str_choices[1:]]
+        formDict['search_strings'] = form.Form(*radio_buttons)
+
+        return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url)
 
     def POST(self):
-        for form in formDict.values():
-            if not form.validates():
-                return render.request(formDict)
+        for entry in formDict.values():
+            if type(entry) is list:
+                for f in entry:
+                    if not f.validates():
+                        return render.request(formDict)
+            else:
+                if not entry.validates():
+                    return render.request(formDict)
         form_data = web.input()
-        parsed = urlparse(form_data['URL'])
-        scheme = parsed[0] if parsed[0] else 'http'
-        # ignore any parameters url:
-        ref_url = scheme + '://' + parsed[1] + parsed[2]
-        back_days = int(form_data['Months in past']) * 30
-        use_phrases = 1 if 'Use phrases' in form_data else 0
-        force_phrases = 1 if 'Force phrases' in form_data else 0
+
         params = {
-                'url': ref_url,
-                'use_phrases': use_phrases,
-                'force_phrases': force_phrases,
-                'back_days': back_days
+                'search_str': form_data.SearchStr,
+                'sources': encode_src_sel(form_data),
+                'match_score': int(form_data.matchScore),
+                'min_wc': int(form_data.minWC),
+                'back_days': int(form_data.backMonths) * 30,
         }
         logging.debug("request parameter: %s" % params)
         raise web.seeother('/results?' + urlencode(params))
@@ -99,58 +160,60 @@ class request(object):
 class results(object):
 
     def GET(self):
-        i = web.input(url=None, use_phrases=0, force_phrases=0,
+        i = web.input(search_str=None, sources=0, match_score=0, min_wc=0,
                 back_days=None)
-        logging.debug("results parameter: url=%s, use_phrases=%s, "
-                      "force_phrases=%s, back_days=%s" %
-                      (i.url, bool(int(i.use_phrases)),
-                      bool(int(i.force_phrases)), i.back_days))
-        try:
-            wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
-            search_str = wa.search_string(use_phrases=int(i.use_phrases),
-                    force_phrases=int(i.force_phrases))
-            logging.debug("article '%s' (%d words) at url='%s': query='%s'",
-                    wa.title, wa.wcount, wa.url, search_str)
-        except al.ArticleFormatError:
-            params = {
-                    'msg': "Non-html resource at %s" % i.url,
-                    'back_link': '/request'
-            }
-            raise web.seeother('/error?' + urlencode(params))
-        except al.ArticleExtractionError:
-            params = {
-                    'msg': "Cannot extract article from %s" % i.url,
-                    'back_link': '/request'
-            }
-            raise web.seeother('/error?' + urlencode(params))
-        except al.InvalidUrlError:
-            params = {
-                    'msg': "Invalid URL: %s" % i.url,
-                    'back_link': '/request'
-            }
-            raise web.seeother('/error?' + urlencode(params))
-        except al.PageRetrievalError:
-            params = {
-                    'msg': "Could not retrieve URL: %s" % i.url,
-                    'back_link': '/request'
-            }
-            raise web.seeother('/error?' + urlencode(params))
-
+        logging.debug("results parameter: search_str='%s', sources=%s, "
+                      "match_score=%s, min_wc=%s, back_days=%s",
+                      i.search_str, i.sources, i.match_score, i.min_wc,
+                      i.back_days)
         results = {}
-        for cat, rng in src_cats.iteritems():
-            sources = [(t[2], t[0]) for t in REF.source_sites.values()
-                       if (rng[0] <= t[1] < rng[1]) and t[2] <=
-                       MAX_QUALITY_WEIGHT]
-            sources = [t[1] for t in sorted(sources)]
+        for cat in REF.src_cats:
+            sources = REF.cat_sources(cat, sites_only=True, sort_by='weight',
+                    mask=decode_src_sel(int(i.sources)))
             # Note: each `results` entry will be a tuple (m, d) with m being a
             # list of matches and d being a list of discards
-            results[cat] = al.best_matches(wa, sources, search_str,
-                    back_days=int(i.back_days), min_wc=MIN_WC,
-                    min_match=MIN_MATCH, num_matches=NUM_MATCHES,
-                    exact=False, delay=GOOGLE_DELAY, allintext=False)
+            results[cat] = al.best_matches(wa, sources, i.search_str,
+                    back_days=int(i.back_days), min_wc=int(i.min_wc),
+                    min_match=int(i.match_score) / 100.,
+                    num_matches=NUM_MATCHES, exact=False, delay=GOOGLE_DELAY,
+                    allintext=False)
             logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
 
-        return render.results(wa, search_str, results, '/request')
+        return render.results(wa, i.search_str, results, '/request')
+
+
+def dedupe(items):
+    """
+    Utility generator that eliminates duplicates from a sequence while
+    maintaining order (source: Python Cookbook)
+    """
+    seen = set()
+    for item in items:
+        if item not in seen:
+            yield item
+            seen.add(item)
+
+
+def encode_src_sel(form_data):
+    """
+    Encodes selected sources as binary flags an returns as a decimal number.
+    """
+    selection = 0
+    for i, s in enumerate(REF.source_sites):
+        if s.id in form_data:
+            selection += 2 ** i
+    return selection
+
+
+def decode_src_sel(selection):
+    """
+    Returns boolean array indicating which sources in REF.source_sites have
+    been included in the selection. `selection` is an integer.
+    """
+    decoded = list(reversed(str(bin(selection))[2:]))
+    decoded = [(True if int(d) else False) for d in decoded]
+    decoded += [False] * (len(REF.source_sites) - len(decoded))
+    return decoded
 
 
 # For serving using any wsgi server
