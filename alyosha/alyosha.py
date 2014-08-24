@@ -1,4 +1,4 @@
-# TODO: rewrite exception catchers (except (...) as ...)
+# TODO: kill numbers (at least zeros)
 import pdb
 import random
 import re
@@ -8,6 +8,7 @@ import unicodedata
 from datetime import datetime as dt
 from datetime import date, timedelta
 import time
+import rfc3987
 import requests
 from goose import Goose
 from lxml import html
@@ -141,7 +142,7 @@ class WebArticle(object):
             ("OECD Report on Public Health") but not as a single word (which
             would have almost zero selectivity for a news article).
         """
-        if not valid_url(ref_url):
+        if not rfc3987.match(ref_url, rule='URI_reference'):
             raise InvalidUrlError(ref_url)
         # check if url points to non-html:
         p_url = urlparse(ref_url)
@@ -700,18 +701,3 @@ def duplicate_urls(url1, url2):
         return True
     else:
         return False
-
-
-def valid_url(url):
-    """
-    Returns None if no valid url can be derived from url, else a (structurally)
-    valid url.
-    """
-    p_url = urlparse(url)
-    # must at least have netloc:
-    if not p_url[1]:
-        return None
-    # check if scheme is present:
-    if not p_url[0]:
-        url = 'http://' + url
-    return url

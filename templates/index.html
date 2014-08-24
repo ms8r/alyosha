@@ -1,25 +1,29 @@
 $def with (urlForm)
 
-$var title: Thify.net - Think for yourself!
+$var page_id: index-page
+
+$var title: Thify.org - Think for yourself!
 
 $var cssfiles: static/styles.css
 
-<form name="main" method="post">
+<center>
 
-<h1>Welcome to <em>Foxes, not Hedgehogs</em>!</h1>
-
-<p>Inspired by Pilip Tetlock's 2005 study about the accuracy of predictions (from <a href="http://longnow.org/seminars/02007/jan/26/why-foxes-are-better-forecasters-than-hedgehogs/">The Long Now</a>):</p> 
-
-<div class="blockquote">
-<p class="longquote">The ancient Greek warrior poet Archilochus coined the phrase: “The fox knows many things; the hedgehog one great thing.” The idea was later expanded by essayist Isaiah Berlin. In Tetlock’s interpretation, Hedgehogs have one grand theory (Marxist, Libertarian, whatever) which they are happy to extend into many domains, relishing its parsimony, and expressing their views with great confidence. Foxes, on the other hand are skeptical about grand theories, diffident in their forecasts, and ready to adjust their ideas based on actual events ...</p>
-
-<p class="longquote">Hedgehogs annoy only their political opposition, while Foxes annoy across the political spectrum, in part because the smartest Foxes cherry-pick idea fragments from the whole array of Hedgehogs.</p>
+<div id="thify-banner">
+    <h1>Thify.org</h1>
+    <h2>Think for yourself!</h2>
+    <p class="instructions">Enter the URL of an article for which you'd like to get alternative or additional views<br />
+      -OR- <br />Enter a search phrase
+    </p>
 </div>
 
-<p><em>Be a fox - enter the URL of an article for which you would like to get additional views from across the political spectrum</em></p   >
-
+<form name="main" method="post">
 $if not urlForm.valid:
     <p class="error">Try again, AmeriCAN</p>
 $:urlForm.render()
 
-<input type="submit" /> </form>
+<input class="submit-button" type="submit" name="checkspec" value="Check search spec" /> 
+<input class="submit-button" type="submit" name="straight" value="I'll take it straight" /> 
+
+</form>
+
+</center>

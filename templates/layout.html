@@ -1,5 +1,10 @@
 $def with (content)
 
+
+$ static_prefix = 'https://s3.amazonaws.com/alyosha.static'
+$ static_prefix = ''
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -8,17 +13,25 @@ $def with (content)
     <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
     $if content.cssfiles:
         $for f in content.cssfiles.split():
-            <link rel="stylesheet" href="http://alyosha.namaniatsea.org/$f" type="text/css" media="screen" charset="utf-8"/>
+            <link rel="stylesheet" href="$static_prefix/$f" type="text/css" media="screen" charset="utf-8"/>
     <title>$content.title</title>
-    <link rel="shortcut icon" href="http://alyosha.namaniatsea.org/static/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="http://alyosha.namaniatsea.org/static/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
 </head>
-<body>
+
+$code:
+    attrs = ''
+    if content.page_id:
+        attrs = 'id={0}'.format(content.page_id)
+
+<body $attrs>
+<!--
     <div class="pagebanner">
         <div class="banner-box">
-        <p class="banner-text" id="site-name"><a href="/">Foxes, not Hedgehogs</a></p>
+        <p class="banner-text" id="site-name"><a href="/">Thify.org</a></p>
         </div>
      </div>
+-->
      <div id="page-wrapper">
          $:content
      </div>

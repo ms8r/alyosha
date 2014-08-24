@@ -1,35 +1,38 @@
 $def with (formDict, src_cats, ref_title, ref_url)
 
-$var title: Thify search specs
+$var page_id: request-page
+
+$var title: Thify.org search specs
 
 $var cssfiles: static/styles.css
 
 <form name="main" method="post">
 
-<h2>Search parameters based on <em>"<a href="$ref_url">$ref_title</a>"</em></h2>
+<h1>Search parameters based on <em>"<a href="$ref_url">$ref_title</a>"</em></h1>
 
-<h3 class="formheader">Pick a search string to be used</h3>
+<div class="float-right">
+<input class="submit-button" type="submit" name="starsearch" value="Start search" />
+</div>
+
+<h2 class="formheader">Pick a search string to be used:</h2>
 $if not formDict['search_strings'].valid:
     <p class="error">Try again, AmeriCAN</p>
 <div class="search-strings">
     $:formDict['search_strings'].render()
 </div>
-<p><em>...or roll your own:</em></p>
-$if not formDict['cust_search_str'].valid:
-    <p class="error">Try again, AmeriCAN</p>
-$:formDict['cust_search_str'].render()
 
-<h3 class="formheader">Select the sources to be searched</h3>
+<h2 class="formheader">Select the sources to be searched:</h2>
+<div class="spectrum">
 <table>
     <thead>
         <tr>
         $for c in src_cats:
             $if loop.first:
-                $ label = "On the {0}...".format(c)
+                $ label = 'On the {0}...'.format(c)
             $elif loop.last:
-                $ label = "...and on the {0}".format(c)
+                $ label = '...and on the {0}'.format(c)
             $else:
-                $ label = "...in the {0}".format(c)
+                $ label = '...in the {0}...'.format(c)
             
             <th>$label</th>
         </tr>
@@ -43,19 +46,22 @@ $:formDict['cust_search_str'].render()
         </tr>
     </tbody>
 </table>
+</div>
 
+<h2 class="formheader">Fine tune search results:</h2>
+<div id="match-criteria">
 <p>
-$:formDict['match_score'].render()
+$:formDict['match_criteria'].render()
 </p>
+</div>
 
-<p>
-$:formDict['min_wc'].render()
-</p>
+<div class="float-right">
+<input class="submit-button" type="submit" name="starsearch" value="Start search" />
+</div>
 
-<h3 class="formheader">Select how many months into the past you want the search to extend</h3>
-<p><em>Note: select '0' if you don't want to restrict the date range.</em></p>
-$if not formDict['date_range'].valid:
-    <p class="error">Try again, AmeriCAN</p>
-$:formDict['date_range'].render()
+<div class="bottom-spacer">
+<p> </p>
+</div>
 
-<input type="submit" /> </form>
+
+</form>

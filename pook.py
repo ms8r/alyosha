@@ -1,8 +1,10 @@
 from urllib import urlencode
 from urlparse import urlparse
 import logging
+import re
 import web
 from web import form
+import rfc3987
 from alyosha import alyosha as al
 from alyosha import reference as REF
 # TODO: add threading for web requests
@@ -32,16 +34,11 @@ urls = (
 )
 
 urlForm = form.Form(
-        form.Textbox('URL', form.notnull, description='Reference URL'),
-        class_='urlform')
-
-dateRangeForm = form.Form(
-        form.Dropdown('backMonths', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            value=0, description="Months in past"))
-
-custSearchStrForm = form.Form(
-        form.Textbox('custSearchStr', description='', class_='custSearchStrForm')
-)
+        form.Textbox(
+            'URL',
+            form.notnull,
+            description='',
+            id='url-entry'))
 
 # construct the source checkboxes:
 srcSitesForms = []
@@ -51,22 +48,37 @@ for cat in REF.src_cats:
             value=c.site, description=c.label) for c in cs]
     srcSitesForms.append(form.Form(*cbForms))
 
-matchScoreForm = form.Form(
-        form.Textbox('matchScore', description='Desired content match [%]:',
-            value=int(MIN_MATCH * 100))
-)
-
-minWcForm = form.Form(
-        form.Textbox('minWC', description='Minimum word count:',
-            value=MIN_WC)
-)
+matchCriteriaForm = form.Form(
+        form.Textbox(
+            'matchScore',
+            form.notnull,
+            form.regexp('\d+', 'Must be an integer number'),
+            size='5',
+            maxlength='3',
+            description='Desired content match:',
+            post='%',
+            value=int(MIN_MATCH * 100),
+            id='match-score'),
+        form.Textbox(
+            'minWC',
+            form.notnull,
+            form.regexp('\d+', 'Must be an integer number'),
+            size='5',
+            maxlength='4',
+            description='Minimum word count:',
+            value=MIN_WC,
+            id='min-word-count'),
+        form.Dropdown(
+            'backMonths',
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            value=0,
+            description="No older than:",
+            post='months (0 for no age restrictions)',
+            id='back-months'))
 
 formDict = {
-        'date_range': dateRangeForm,
-        'cust_search_str': custSearchStrForm,
         'src_by_cat': srcSitesForms,
-        'match_score': matchScoreForm,
-        'min_wc': minWcForm
+        'match_criteria': matchCriteriaForm,
 }
 
 # for now a global to maintain WebArticle object across pages
@@ -79,17 +91,31 @@ class index(object):
         return render.index(urlForm)
 
     def POST(self):
+
         global wa
+
         if not urlForm.validates():
             return render.index(urlForm)
         form_data = web.input()
-        parsed = urlparse(form_data['URL'])
-        scheme = parsed[0] if parsed[0] else 'http'
-        # ignore any parameters in url:
-        ref_url = scheme + '://' + parsed[1] + parsed[2]
 
-        params = {'url': ref_url}
-        raise web.seeother('/request?' + urlencode(params), '/')
+        check_spec = True if 'checkspec' in form_data else False
+
+        if rfc3987.match(form_data.URL, rule='URI_reference'):
+            parsed = urlparse(form_data['URL'], scheme='http')
+            ref_url = parsed.scheme + '://' + '/'.join([parsed.netloc,
+                    parsed.path]).lstrip('/')
+        else:
+            ref_url = None
+
+        if ref_url and check_spec:
+            params = {'url': ref_url}
+            raise web.seeother('/request?' + urlencode(params), '/')
+        else:
+            params = {
+                    'msg': "Sorry, not implememted yet...",
+                    'back_link': '/'
+            }
+            raise web.seeother('/error?' + urlencode(params))
 
 
 class error(object):
@@ -100,6 +126,8 @@ class error(object):
 
 
 class request(object):
+
+    cust_search_prompt = 'Roll your own:'
 
     def GET(self):
 
@@ -114,7 +142,7 @@ class request(object):
                 al.InvalidUrlError, al.PageRetrievalError) as e:
             params = {
                     'msg': "%s: %s" % (type(e), e.message),
-                    'back_link': '/request'
+                    'back_link': '/'
             }
             raise web.seeother('/error?' + urlencode(params))
         # need to de-dupe search_strings in case no phrases are found
@@ -127,15 +155,24 @@ class request(object):
                                           for sso in search_str_opts]))
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
-                description='', value=search_str_choices[0])]
+                description='', value=search_str_choices[0],
+                class_='search-string-choice')]
         # add remaining search string options (if any)
-        radio_buttons += [form.Radio('SearchStr', [ssc], description='')
-                for ssc in search_str_choices[1:]]
+        radio_buttons += [form.Radio('SearchStr', [ssc], description='',
+                class_='search-string-choice') for ssc in
+                search_str_choices[1:]]
+        radio_buttons.append(form.Radio('SearchStr',
+                [request.cust_search_prompt], description='',
+                id='cust-search-rb'))
+        # add custom search string choice and text box
+        radio_buttons.append(form.Textbox('CustSearch', description='',
+                size='40', id='cust-search-entry'))
         formDict['search_strings'] = form.Form(*radio_buttons)
 
         return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url)
 
     def POST(self):
+
         for entry in formDict.values():
             if type(entry) is list:
                 for f in entry:
@@ -146,8 +183,12 @@ class request(object):
                     return render.request(formDict)
         form_data = web.input()
 
+        search_str = form_data.SearchStr
+        if search_str == request.cust_search_prompt:
+            search_str = form_data.CustSearch
+
         params = {
-                'search_str': form_data.SearchStr,
+                'search_str': search_str,
                 'sources': encode_src_sel(form_data),
                 'match_score': int(form_data.matchScore),
                 'min_wc': int(form_data.minWC),
