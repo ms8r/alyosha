@@ -12,7 +12,7 @@ body
     text-align: left;
 }
 
-#index-page, #request-page {
+#index-page, #request-page, #results-page {
     background-color: #f7f7f7;
 }    
 
@@ -176,6 +176,15 @@ margin: 1em 2em 0 0;
 }
 
 
+#request-page h1, #results-page h1 {
+    margin: 30px 0 10px 0;
+    font-size: 1.5em;
+    font-weight: normal;
+    margin: 50px 0 10px 0;
+}    
+
+
+
 /*===index page=== */
 
 #thify-banner {
@@ -222,13 +231,6 @@ text-align: center;
 
 
 /*===request page===*/
-#request-page h1 {
-    margin: 30px 0 10px 0;
-    font-size: 1.5em;
-    font-weight: normal;
-    margin: 50px 0 10px 0;
-}    
-
 #request-page .formheader {
     font-size: 1.2em;
     font-weight: normal;
@@ -289,50 +291,9 @@ text-align: center;
 
 /*=== results page ===*/
 
-/* column layout for results page */
-#results-main-wrapper {
-	clear: both;
-	display: inline;/* IE double margin fix. Feel free to move this to your IE specific stylesheets. */
-	float: left;
-	padding: 0 0px 0 0px;
-	position: relative;
-	width: 100%;
-}
-
-#results-left {
-    float: left;
-    width: 32%;
-    margin: 0 0px 0 0px;
-    background-color: rgba(0,0,170,0.2);
-}
-
-#results-right {
-    float: right;
-    width: 32%;
-    margin: 0 0px 0 0px;
-    background-color: rgba(170,0,0,0.2);
-}
-
-#results-center {
-    float: left;
-    width: 32%;
-    margin: 0 2% 0 2%;
-    background-color: rgba(0,170,0,0.2);
-}
-
-#results-left, #results-center, #results-right {
-    padding: 10px;
-    border-radius: 15px;
-}
-
-#results-bottom-box {
-    clear: both;
-}
-
-
 /* headings for search results */
 
-.results-column h2
+#results-page .spectrum h2
 {
     font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
@@ -341,32 +302,18 @@ text-align: center;
     margin: 10px 0 0 0;
 }
 
-#results-left h2
-{
-    text-align: left;
-}
 
-#results-center h2
-{
-    text-align: center;
-}
-
-#results-right h2
-{
-    text-align: right;
-}
-
-.results-column h3
+#results-page .spectrum h3
 {
     font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
     text-align: left;
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: normal;
     margin: 5px 0 0 0;
 }
 
-.results-column h4
+#results-page .spectrum h4
 {
     font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
@@ -377,9 +324,18 @@ text-align: center;
     margin: 0 0 0 0;
 }
 
-.match-score
-{
+
+#results-page .spectrum p {
+    color: #555555;
+}
+
+#results-page .spectrum .res-description {
+    margin: 0.5em 0 1.0em 0;
+}
+
+#results-page .spectrum .match-score {
     font-style: italic;
+    margin: 0.5em 0 0 0;
 }
 
 

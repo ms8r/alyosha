@@ -220,7 +220,8 @@ class results(object):
                     allintext=False)
             logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
 
-        return render.results(wa, i.search_str, results, '/request')
+        return render.results(wa, i.search_str, REF.src_cats.keys(), results,
+                '/request')
 
 
 def dedupe(items):
