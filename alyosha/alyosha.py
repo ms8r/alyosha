@@ -60,6 +60,8 @@ class ResultParsingError(Exception):
 class WebArticleError(Exception):
     pass
 
+class NotAnArticleError(WebArticleError):
+    pass
 
 class ArticleExtractionError(WebArticleError):
     pass
@@ -109,6 +111,12 @@ class WebArticle(object):
     -------
     The following exceptions all inherit from WebArticleError:
 
+    NotAnArticleError
+        If parsed HTML lokks like it's not an article an might therefore trip
+        goose. It will check if there is an excessive number of headings
+        anywhere on levels 1-4 (excessive is `> WebArticle.max_headings`) in
+        which case we assume that the page is a listing of articles rather
+        than an article itself.
     ArticleFormatError
         If path component of `url` points to non-html resource.
     ArticleExtractionError
@@ -121,6 +129,8 @@ class WebArticle(object):
     """
     # file extensions to be excluded (will raise InvalidUrlError):
     exclude_formats = ['pdf', 'doc', 'mp3', 'mp4']
+    # max numbers of headings an any level 1-4 to pass as article
+    max_headings = 100
     # stemmer used to normalize words for article comparison
     stemmer = nltk.stem.SnowballStemmer('english')
 
@@ -161,7 +171,15 @@ class WebArticle(object):
         if not result.status_code == requests.codes.ok:
             raise PageRetrievalError(ref_url)
 
-        article = Goose().extract(raw_html=result.text)
+        parsed = html.fromstring(result.text)
+        if max([len(parsed.xpath('//h{0}'.format(i+1)))
+                for i in xrange(4)]) > WebArticle.max_headings:
+            logging.debug("too many headings in %s, raising exception",
+                    ref_url)
+            raise NotAnArticleError(ref_url)
+
+        g = Goose()
+        article = g.extract(raw_html=result.text)
         self.title = article.title
         self.text = article.cleaned_text
         if not self.text:

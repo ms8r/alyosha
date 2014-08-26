@@ -138,8 +138,9 @@ class request(object):
             wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
             logging.debug("article '%s' (%d words) at url='%s'",
                     wa.title, wa.wcount, wa.url)
-        except (al.ArticleFormatError, al.ArticleExtractionError,
-                al.InvalidUrlError, al.PageRetrievalError) as e:
+        except (al.NotAnArticleError, al.ArticleFormatError,
+                al.ArticleExtractionError, al.InvalidUrlError,
+                al.PageRetrievalError) as e:
             params = {
                     'msg': "%s: %s" % (type(e), e.message),
                     'back_link': '/'
