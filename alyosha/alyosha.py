@@ -60,8 +60,10 @@ class ResultParsingError(Exception):
 class WebArticleError(Exception):
     pass
 
+
 class NotAnArticleError(WebArticleError):
     pass
+
 
 class ArticleExtractionError(WebArticleError):
     pass
@@ -509,8 +511,6 @@ class SiteResults(GoogleSerp):
     back_days: int
         Number of days to search into past
     """
-    exclude_formats = WebArticle.exclude_formats
-
     def __init__(self, site, *search_ops, **search_kwds):
         """
         Arguments:
@@ -533,7 +533,6 @@ class SiteResults(GoogleSerp):
         """
         if not search_ops:
             search_ops = []
-        search_ops += [('-ext', x) for x in SiteResults.exclude_formats]
         if not search_kwds:
             search_kwds = {}
         search_kwds['site'] = site
