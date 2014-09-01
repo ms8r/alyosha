@@ -169,7 +169,7 @@ test_terms = [
 
 short_sleep = 30
 long_sleep = 300
-max_fail_count = 5
+max_fail_count = 3
 
 sources = [s.site for s in sorted(REF.source_sites,
            key=lambda k: k.specVal, reverse=True)]
