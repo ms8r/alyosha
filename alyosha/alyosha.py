@@ -488,8 +488,16 @@ class GoogleSerp(object):
             raise ResultParsingError(query)
         dates = [GoogleSerp._date_re.match(d) for d in descs]
         for i, d in enumerate(dates):
-            dates[i] = (dt.strptime(d.group(), '%b %d, %Y').date()
-                        if d else None)
+            for fmt in ['%b %d, %Y', '%B %d, %Y']:
+                try:
+                    dates[i] = (dt.strptime(d.group(), '%b %d, %Y').date()
+                                if d else None)
+                except ValueError:
+                    continue
+                else:
+                    break
+            else:
+                dates[i] = None
         self.res = [{'title': t, 'link': a, 'desc': x, 'url': u, 'date': d}
                 for (t, a, x, u, d) in zip(titles, links, descs, urls, dates)]
         logging.debug("stored %d results in res dict" % len(titles))
