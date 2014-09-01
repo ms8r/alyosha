@@ -55,7 +55,7 @@ sources = [s.site for s in sorted(REF.source_sites,
 
 if __name__ == '__main__':
 
-    with open('done_list.tsv', 'r') as fin:
+    with open('termcntr.done', 'r') as fin:
         done = [tuple(line.rstrip().split('\t')) for line in fin]
 
     items = list(product(sources, [base_term] + test_terms))
