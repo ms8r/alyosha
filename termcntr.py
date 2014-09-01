@@ -52,9 +52,6 @@ max_fail_count = 5
 sources = [s.site for s in sorted(REF.source_sites,
            key=lambda k: k.specVal, reverse=True)]
 
-sources = sources[:3]
-test_terms = test_terms[:2]
-
 gs = al.GoogleSerp()
 
 items = list(product(sources, [base_term] + test_terms))
