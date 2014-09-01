@@ -2,9 +2,9 @@ from alyosha import alyosha as al
 from alyosha import reference as REF
 import time
 from random import random
-import re
+from random import shuffle
 import logging
-import json
+from itertools import product
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,7 +32,6 @@ test_terms = [
         '"single parent"',
         '"national security"',
         '"minimum wage"',
-        '"tree hugger"',
         '"endangered species"',
         '"austerity measures"',
         '"fiscal discipline"',
@@ -42,33 +41,46 @@ test_terms = [
         '"federal government"',
         '"environmental activist"',
         'discrimination',
-        'religious right',
+        '"religious right"',
+        '"affordable care act"',
         'obamacare' ]
 
-max_sleep = 30
+short_sleep = 30
+long_sleep = 300
+max_fail_count = 5
 
 sources = [s.site for s in sorted(REF.source_sites,
            key=lambda k: k.specVal, reverse=True)]
 
+sources = sources[:3]
+test_terms = test_terms[:2]
+
 gs = al.GoogleSerp()
-for src in sources:
-    time.sleep(random() * max_sleep)
-    try:
-        num_res = gs.search(base_term, exact=True, site=src)
-        logging.info("%s:%s:%d", src, base_term, num_res)
-    except al.EmptySearchResult:
-        num_res = 0
-        logging.info("%s:%s:%d", src, base_term, num_res)
-    except (al.ResultParsingError, al.PageRetrievalError) as e:
-        logging.warning("%s:%s: %s", src, base_term, e)
-    for t in test_terms:
-        time.sleep(random() * max_sleep)
+
+items = list(product(sources, [base_term] + test_terms))
+todo = set(items)
+shuffle(items)
+first = True
+while todo:
+    if not first:
+        time.sleep(long_sleep)
+    else:
+        first = False
+    fail_count = 0
+    for src, t in items:
+        if fail_count > max_fail_count:
+            break
+        time.sleep(random() * short_sleep)
+        logging.info("*** items left: %d", len(todo))
         try:
             num_res = gs.search(t, exact=True, site=src)
-            logging.info("%s:%s:%d", src, t, num_res)
         except al.EmptySearchResult:
-            num_res = 0
-            logging.info("%s:%s:%d", src, t, num_res)
+            logging.info("%s:%s:%d", src, t, 0)
         except (al.ResultParsingError, al.PageRetrievalError) as e:
-            logging.warning("%s:%s: %s", src, base_term, e)
-
+            fail_count += 1
+            logging.warning("%s:%s: %s: ", src, t, type(e), e.message)
+        else:
+            logging.info("%s:%s:%d", src, t, num_res)
+            todo.remove((src, t))
+            if fail_count:
+                fail_count -= 1
