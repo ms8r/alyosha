@@ -47,7 +47,7 @@ test_terms = [
         'obamacare' ]
 
 short_sleep = 30
-long_sleep = 300
+long_sleep = 900
 max_fail_count = 3
 
 sources = [s.site for s in sorted(REF.source_sites,
