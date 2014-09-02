@@ -44,7 +44,7 @@ test_terms = [
         'discrimination',
         '"religious right"',
         '"affordable care act"',
-        'obamacare' ]
+        'obamacare']
 
 short_sleep = 30
 long_sleep = 900
@@ -56,20 +56,20 @@ sources = [s.site for s in sorted(REF.source_sites,
 if __name__ == '__main__':
 
     with open('termcntr.done', 'r') as fin:
-        done = [tuple(line.rstrip().split('\t')) for line in fin]
+        done = set([tuple(line.rstrip().split('\t')[:2]) for line in fin])
 
-    items = list(product(sources, [base_term] + test_terms))
-    items = [i for i in items if i not in done]
-    todo = set(items)
-    shuffle(items)
+    todo = list(product(sources, [base_term] + test_terms))
+    todo = set([t for t in todo if t not in done])
     first = True
+    fail_count = 0
     gs = al.GoogleSerp()
     while todo:
         if not first:
             time.sleep(long_sleep)
         else:
             first = False
-        fail_count = 0
+        items = list(todo)
+        shuffle(items)
         for src, t in items:
             if fail_count > max_fail_count:
                 break
