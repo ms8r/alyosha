@@ -70,12 +70,12 @@ if __name__ == '__main__':
             first = False
         items = list(todo)
         shuffle(items)
-        if fail_count == max_fail_count:
+        if fail_count > max_fail_count:
             fail_count -= 1
         for src, t in items:
             if fail_count > max_fail_count:
                 break
-            time.sleep(random() * short_sleep)
+            time.sleep((short_sleep + random() * short_sleep) / 2.)
             logging.info("*** items left: %d", len(todo))
             try:
                 num_res = gs.search(t, exact=True, site=src)
