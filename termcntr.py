@@ -47,7 +47,7 @@ test_terms = [
         'obamacare']
 
 short_sleep = 30
-long_sleep = 900
+long_sleep = 1852
 max_fail_count = 3
 
 sources = [s.site for s in sorted(REF.source_sites,
@@ -70,6 +70,8 @@ if __name__ == '__main__':
             first = False
         items = list(todo)
         shuffle(items)
+        if fail_count == max_fail_count:
+            fail_count -= 1
         for src, t in items:
             if fail_count > max_fail_count:
                 break
