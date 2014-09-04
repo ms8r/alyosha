@@ -2,3 +2,4 @@ venv
 *.pyc
 *~
 non-git
+redis-2.8.14
