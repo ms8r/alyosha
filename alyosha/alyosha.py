@@ -1,5 +1,4 @@
 # TODO: kill numbers (at least zeros)
-import pdb
 import random
 import re
 import logging
@@ -8,6 +7,7 @@ import unicodedata
 from datetime import datetime as dt
 from datetime import date, timedelta
 import time
+import hashlib
 import rfc3987
 import requests
 from goose import Goose
@@ -78,6 +78,14 @@ class InvalidUrlError(WebArticleError):
 
 
 class PageRetrievalError(WebArticleError):
+    pass
+
+
+class RedisSetError(Exception):
+    pass
+
+
+class RedisGetError(Exception):
     pass
 
 
@@ -287,6 +295,116 @@ class WebArticle(object):
         a = np.array([[da.get(w, 0), db.get(w, 0)] for w in voc])
         return np.dot(a[:, 0], a[:, 1]) / (np.linalg.norm(a[:, 0]) *
                                            np.linalg.norm(a[:, 1]))
+
+
+class RedisWA(object):
+    """
+    A bare bones web article for storage to pr retrieval from  Redis.
+
+    Attributes (will be set by `redis_retrieve`):
+    -----------
+    r : Redis instance
+        Redis instamce where the has for thos object is stored.
+    key : str
+        Key under which the hash for this obkect os stored on Redis.
+    url : str
+        The articles URL; will be SHA1'd and returned as the
+        key to the WebArticle hash stored on Redis.
+    title : str
+        The article's title
+    wcount : int
+        Word count of original article (incl. stop words).
+    stem_tops : list of tuples
+        Stemmed tokens in WebArticle with their respective counts, sorted in
+        decending order. We need only enough items to enbale the match
+        evaluation against another article. so 20 items might be enough.
+    search_str_opts: list
+        List with the search string options (no phrases, forced phrases and
+        relaxed phrases), deduped in case their aren't any valid collocations
+        in the text.
+    """
+    def __init__(self, r=None, key=None):
+        """
+        Initializes attributes by retrieving has for `key` from `r` (Redis
+        instace) if bot argumemts are specified. Otherwise just sets all
+        attributes to `None`.
+        """
+        if r and key:
+            self.redis_retrieve(r, key)
+        else:
+            self.r = None
+            self.key = None
+            self.title = None
+            self.wcount = None
+            self.stem_tops = None
+            self.search_str_opts = None
+
+    @staticmethod
+    def redis_store(r, url, title, wcount, stem_tops, search_str_opts):
+        """
+        Packs the passed-in values into a hash which it pushes onto a Redis
+        server and returns the key.
+
+        Arguments:
+        ----------
+        r : Redis instance
+            The Redis server to push to, created via `redis.Redis()` or
+            `redis.StricRedis()`.
+        url : str
+            The articles URL; will be SHA1'd and returned as the
+            key to the WebArticle hash stored on Redis.
+        title : str
+            The article's title
+        wcount : int
+            Word count of original article (incl. stop words).
+        stem_tops : list of tuples
+            Stemmed tokens in WebArticle with their respective counts, sorted
+            in decending order. We need only enough items to enbale the match
+            evaluation against another article. so 20 items might be enough.
+        search_str_opts: list
+            List with the search string options (no phrases, forced phrases and
+            relaxed phrases), deduped in case their aren't any valid
+            collocations in the text.
+
+        Returns:
+        --------
+        SHA1 sum of the URL as the key to the hash on Redis.
+
+        Raises:
+        -------
+        `RedisSetError` if `r.hmset()` does not return `True`
+        """
+        key = hashlib.sha1(url).hexdigest()
+
+        mapping = {}
+        mapping['url'] = url
+        mapping['title'] = title
+        mapping['wcount'] = str(wcount)
+        mapping['stem_tops'] = ' '.join(["{0}:{1}".format(*s) for s in
+                                         stem_tops])
+        mapping['search_str_opts'] = ' '.join([s.replace(' ', ':') for s in
+                                               search_str_opts])
+        if not r.hmset(key, mapping):
+            raise RedisSetError("Can't push to Redis: {0}".format(url))
+
+        return key
+
+    def redis_retrieve(self, r, key):
+        """
+        Retrieves hash for `key` from Redis instamce `r` and sets self's
+        attributes accordingly. Raises `RedisGetError` if key lookup fails.
+        """
+        values = r.hgetall(key)
+        if not values:
+            raise RedisGetError(
+                    "failed to get any values under key '{0}'".format(key))
+        self.url = values['url']
+        self.title = values['title']
+        self.wcount = int(values['wcount'])
+        stl = [s.split(':') for s in values['stem_tops'].split()]
+        self.stem_tops = [(s[0], int(s[1])) for s in stl]
+        self.search_str_opts = [s.replace(':', ' ') for s in
+                                values['search_str_opts'].split()]
 
 
 class GoogleSerp(object):

@@ -1,10 +1,12 @@
-$def with (wa, search_str, src_cats, results, back_link)
+$def with (wa, search_str, cat_src, results, back_link)
 
 $var page_id: results-page
 
 $var title: Thify.org - Results
 
 $var cssfiles: static/styles.css
+
+$var jsfiles: static/jquery-2.1.1.js static/code.js
 
 $code:
     # max. number of results to show per category:
@@ -40,7 +42,6 @@ $def cat_res(c_matches, c_discards, max_res):
         $for r in c_discards[:n]:
             $:render_res(r)
 
-
 $if results:
     <h1>Recommended reading</h1>
     <div id="results-top-box">
@@ -50,7 +51,7 @@ $if results:
         <table>
             <thead>
                 <tr>
-                $for c in src_cats:
+                $for c in cat_src:
                     $if loop.first:
                         $ label = 'On the {0}...'.format(c)
                     $elif loop.last:
@@ -63,22 +64,25 @@ $if results:
             </thead>
             <tbody>
                 <tr>
-                $for c in src_cats:
+                $for c in cat_src:
                     $ m, __ = results[c]
                     <td>
-                    $:cat_res(m, None, max_res=max_res)
+                        <!-- replace by js: $:cat_res(m, None, max_res=max_res) -->
                     </td>
                 </tr>
                 <tr>
-                $for c in src_cats:
+                $for c in cat_src:
                     $ __, d = results[c]
                     <td>
-                    $:cat_res(None, d, max_res=max_res)
+                    <!-- replace by js: $:cat_res(None, d, max_res=max_res) -->
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
+    $for k, v in cat_src.iteritems():
+        $ v_str = ' '.join(v)
+        <param class="cat-src" name="$k" value="$v_str" />
 
 $else:
     <div=source-results>

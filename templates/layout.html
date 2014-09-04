@@ -2,6 +2,7 @@ $def with (content)
 
 
 $ static_prefix = 'https://s3.amazonaws.com/alyosha.static'
+$ static_prefix = ''
 
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -16,6 +17,10 @@ $ static_prefix = 'https://s3.amazonaws.com/alyosha.static'
     <title>$content.title</title>
     <link rel="shortcut icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
     <link rel="icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
+    $if content.jsfiles:
+    $for f in content.jsfiles.split():
+        <script type="text/javascript" src="$static_prefix/$f"></script>
+
 </head>
 
 $code:
@@ -24,15 +29,10 @@ $code:
         attrs = 'id={0}'.format(content.page_id)
 
 <body $attrs>
-<!--
-    <div class="pagebanner">
-        <div class="banner-box">
-        <p class="banner-text" id="site-name"><a href="/">Thify.org</a></p>
-        </div>
-     </div>
--->
+
      <div id="page-wrapper">
          $:content
      </div>
+
 </body>
 </html>

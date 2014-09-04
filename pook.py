@@ -1,10 +1,10 @@
 from urllib import urlencode
-from urlparse import urlparse
+import urlparse
 import logging
-import re
 import web
 from web import form
 import rfc3987
+import redis
 from alyosha import alyosha as al
 from alyosha import reference as REF
 # TODO: add threading for web requests
@@ -18,6 +18,8 @@ NUM_MATCHES = 2
 # Cut-off for source site's quality weight to be included in search (heavy
 # sinks to bottom, [0, 100]
 MAX_QUALITY_WEIGHT = 50
+# number of stem_top list elements to consider for match score:
+MATCH_SCORE_LEN = 20
 # Max. wait (in seconds) in between calls to Google:
 GOOGLE_DELAY = 1
 
@@ -81,8 +83,11 @@ formDict = {
         'match_criteria': matchCriteriaForm,
 }
 
-# for now a global to maintain WebArticle object across pages
-wa = None
+# Connect to Redis:
+redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
+urlparse.uses_netloc.append('redis')
+url = urlparse.urlparse(redis_url)
+my_redis = redis.StrictRedis(host=url.hostname, port=url.port)
 
 
 class index(object):
@@ -101,7 +106,7 @@ class index(object):
         check_spec = True if 'checkspec' in form_data else False
 
         if rfc3987.match(form_data.URL, rule='URI_reference'):
-            parsed = urlparse(form_data['URL'], scheme='http')
+            parsed = urlparse.urlparse(form_data['URL'], scheme='http')
             ref_url = parsed.scheme + '://' + '/'.join([parsed.netloc,
                     parsed.path]).lstrip('/')
         else:
@@ -131,8 +136,6 @@ class request(object):
 
     def GET(self):
 
-        global wa
-
         i = web.input(url='', back_link='/')
         try:
             wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
@@ -154,6 +157,11 @@ class request(object):
         ]
         search_str_choices = list(dedupe([wa.search_string(num_terms=6, **sso)
                                           for sso in search_str_opts]))
+
+        # store essentials on Redis:
+        wa_key = al.RedisWA.redis_store(my_redis, wa.url, wa.title, wa.wcount,
+                wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
+
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
                 description='', value=search_str_choices[0],
@@ -170,7 +178,8 @@ class request(object):
                 size='40', id='cust-search-entry'))
         formDict['search_strings'] = form.Form(*radio_buttons)
 
-        return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url)
+        return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url,
+                wa_key)
 
     def POST(self):
 
@@ -209,19 +218,24 @@ class results(object):
                       i.search_str, i.sources, i.match_score, i.min_wc,
                       i.back_days)
         results = {}
+        # we need to construct a dict of source categories mapped to the
+        # correponding (masked) source lists to be passed by render to the
+        # page, so we can include it there as a JS variable.
+        cat_sources = {}
         for cat in REF.src_cats:
-            sources = REF.cat_sources(cat, sites_only=True, sort_by='weight',
-                    mask=decode_src_sel(int(i.sources)))
+            cat_sources[cat] = REF.cat_sources(cat, sites_only=True,
+                    sort_by='weight', mask=decode_src_sel(int(i.sources)))
             # Note: each `results` entry will be a tuple (m, d) with m being a
             # list of matches and d being a list of discards
-            results[cat] = al.best_matches(wa, sources, i.search_str,
-                    back_days=int(i.back_days), min_wc=int(i.min_wc),
-                    min_match=int(i.match_score) / 100.,
-                    num_matches=NUM_MATCHES, exact=False, delay=GOOGLE_DELAY,
-                    allintext=False)
-            logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
+            #   results[cat] = al.best_matches(wa, cat_sources[cat], i.search_str,
+            #           back_days=int(i.back_days), min_wc=int(i.min_wc),
+            #           min_match=int(i.match_score) / 100.,
+            #           num_matches=NUM_MATCHES, exact=False, delay=GOOGLE_DELAY,
+            #           allintext=False)
+            #   logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
+            results[cat] = (None, None)
 
-        return render.results(wa, i.search_str, REF.src_cats.keys(), results,
+        return render.results(wa, i.search_str, cat_sources, results,
                 '/request')
 
 
