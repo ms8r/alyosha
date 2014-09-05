@@ -8,7 +8,6 @@ import rfc3987
 import redis
 from alyosha import alyosha as al
 from alyosha import reference as REF
-# TODO: add threading for web requests
 
 # Minimum word count for search result to be eligible
 MIN_WC = 400
@@ -26,11 +25,13 @@ GOOGLE_DELAY = 1
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Connect to Redis:
+# Connect to Redis and define expiry in seconds:
 redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 urlparse.uses_netloc.append('redis')
 url = urlparse.urlparse(redis_url)
-my_redis = redis.StrictRedis(host=url.hostname, port=url.port)
+redis_conn = redis.StrictRedis(host=url.hostname, port=url.port)
+# TODO: change back to 500 after testing
+REDIS_EXPIRE = 5000
 
 render = web.template.render('templates/', base='layout')
 
@@ -156,18 +157,6 @@ class request(object):
         ]
         search_str_choices = list(dedupe([wa.search_string(num_terms=6, **sso)
                                           for sso in search_str_opts]))
-
-        # store essentials on Redis:
-        wa_key = al.RedisWA.redis_store(my_redis, wa.url, wa.title, wa.wcount,
-                wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
-        formDict['wa_key'] = form.Form(form.Textbox(
-                'waKey',
-                form.notnull,
-                description='',
-                id='wa-key',
-                value=wa_key,
-                style="display: none;"))
-
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
                 description='', value=search_str_choices[0],
@@ -184,6 +173,19 @@ class request(object):
                 size='40', id='cust-search-entry'))
         formDict['search_strings'] = form.Form(*radio_buttons)
 
+        # store essentials on Redis:
+        wa_key = al.RedisWA.redis_store(redis_conn, wa.url, wa.title, wa.wcount,
+                wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
+        redis_conn.expire(wa_key, REDIS_EXPIRE)
+        # put key string into hidden form field for retrieval by POST:
+        formDict['wa_key'] = form.Form(form.Textbox(
+                'waKey',
+                form.notnull,
+                description='',
+                id='wa-key',
+                value=wa_key,
+                style="display: none;"))
+
         return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url)
 
     def POST(self):
@@ -198,14 +200,12 @@ class request(object):
                     return render.request(formDict)
         form_data = web.input()
 
-        wa_key = form_data.waKey
-
         search_str = form_data.SearchStr
         if search_str == request.cust_search_prompt:
             search_str = form_data.CustSearch
 
         params = {
-                'wa_key': wa_key,
+                'wa_key': form_data.waKey,
                 'search_str': search_str,
                 'sources': encode_src_sel(form_data),
                 'match_score': int(form_data.matchScore),
@@ -228,7 +228,7 @@ class results(object):
                 i.back_days)
         # get WebArticle data from Redis:
         try:
-            rwa = al.RedisWA(my_redis, i.wa_key)
+            rwa = al.RedisWA(redis_conn, i.wa_key)
         except al.RedisGetError as e:
             logging.debug("%s: %s", type(e), e.message)
             raise
@@ -251,8 +251,8 @@ class results(object):
             #   logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
             results[cat] = (None, None)
 
-        return render.results(rwa, i.search_str, cat_sources, results,
-                '/request')
+        return render.results(
+                rwa, i.search_str, cat_sources, results, '/request')
 
 
 def dedupe(items):
