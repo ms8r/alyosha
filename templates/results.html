@@ -1,4 +1,4 @@
-$def with (rwa, search_str, cat_src, results, back_link)
+$def with (rwa, search_str, cat_src, match_score, min_wc, back_days, back_link)
 
 $var page_id: results-page
 
@@ -42,52 +42,51 @@ $def cat_res(c_matches, c_discards, max_res):
         $for r in c_discards[:n]:
             $:render_res(r)
 
-$if results:
-    <h1>Recommended reading</h1>
-    <div id="results-top-box">
-        <p>Based on the article <em><a href="$rwa.url">$rwa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
-    </div>
-    <div class="spectrum">
-        <table>
-            <thead>
-                <tr>
-                $for c in cat_src:
-                    $if loop.first:
-                        $ label = 'On the {0}...'.format(c)
-                    $elif loop.last:
-                        $ label = '...and on the {0}'.format(c)
-                    $else:
-                        $ label = '...in the {0}...'.format(c)
-            
-                    <th>$label</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                $for c in cat_src:
-                    $ m, __ = results[c]
-                    <td>
-                        <!-- replace by js: $:cat_res(m, None, max_res=max_res) -->
-                    </td>
-                </tr>
-                <tr>
-                $for c in cat_src:
-                    $ __, d = results[c]
-                    <td>
-                    <!-- replace by js: $:cat_res(None, d, max_res=max_res) -->
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    $# parameters for JS script:
-    <param id="wa-key" name="wa_key" value="$rwa.key" />
-    $for k, v in cat_src.iteritems():
-        $ v_str = ' '.join(v)
-        <param class="cat-src" name="$k" value="$v_str" />
+<h1>Recommended reading</h1>
+<div id="results-top-box">
+    <p>Based on the article <em><a href="$rwa.url">$rwa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
+</div>
+<div class="spectrum">
+    <table>
+        <thead>
+            <tr>
+            $for c in cat_src:
+                $if loop.first:
+                    $ label = 'On the {0}...'.format(c)
+                $elif loop.last:
+                    $ label = '...and on the {0}'.format(c)
+                $else:
+                    $ label = '...in the {0}...'.format(c)
+        
+                <th>$label</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+            $# for c in cat_src:
+                $# m, __ = results[c]
+                <td>
+                    $# :cat_res(m, None, max_res=max_res)
+                </td>
+            </tr>
+            <tr>
+            $# for c in cat_src:
+                $# __, d = results[c]
+                <td>
+                    $# :cat_res(None, d, max_res=max_res)
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+$# parameters for JS script:
+<param id="wa-key" name="wa_key" value="$rwa.key" />
+<param id="search-str" name="search_str" value='$search_str' />
+$for k, v in cat_src.iteritems():
+    $ v_str = ' '.join(v)
+    <param class="cat-src" name="$k" value="$v_str" />
+<param id="match-score" name="match_score" value="$match_score" />
+<param id="min-wc" name="min_wc" value="$min_wc" />
+<param id="back-days" name="back_days" value="$back_days" />
 
-$else:
-    <div=source-results>
-    <p>Nothing to show!</p> 
-    <p><a href="$back_link">&lt;&lt; Go back</a></p>
-    </div>
+</div>

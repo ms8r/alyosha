@@ -2,12 +2,18 @@ import os
 from urllib import urlencode
 import urlparse
 import logging
+import json
 import web
 from web import form
 import rfc3987
 import redis
+import rq
 from alyosha import alyosha as al
 from alyosha import reference as REF
+
+# NOTE: for ajax/rq testing only:
+import utils
+import time
 
 # Minimum word count for search result to be eligible
 MIN_WC = 400
@@ -39,7 +45,7 @@ urls = (
     '/', 'index',
     '/request', 'request',
     '/results', 'results',
-    '/sources', 'sources',
+    '/scorematches', 'score_matches',
     '/error', 'error'
 )
 
@@ -121,13 +127,6 @@ class index(object):
                     'back_link': '/'
             }
             raise web.seeother('/error?' + urlencode(params))
-
-
-class error(object):
-
-    def GET(self):
-        i = web.input(msg='', back_link='/')
-        return render.error(i.msg, i.back_link)
 
 
 class request(object):
@@ -252,7 +251,34 @@ class results(object):
             results[cat] = (None, None)
 
         return render.results(
-                rwa, i.search_str, cat_sources, results, '/request')
+                rwa, i.search_str, cat_sources, i.match_score, i.min_wc,
+                i.back_days, '/request')
+
+
+class score_matches(object):
+
+    q = rq.Queue(connection=redis_conn)
+
+    def GET(self):
+        i = web.input(wa_key=None, search_str=None, job_id=None)
+        if i.get('job_id'):
+            logging.debug("score_matches called with key_id '%s'", i.job_id)
+            job = score_matches.q.fetch_job(i.job_id)
+            return json.dumps({'status': job.get_status(),
+                               'result': job.result})
+        else:
+            logging.debug("score matches called with %s", i)
+            j = score_matches.q.enqueue(utils.chill)
+            s = json.dumps({'job_id': j.id})
+            logging.debug("JSON string: %s", s)
+            return s
+
+
+class error(object):
+
+    def GET(self):
+        i = web.input(msg='', back_link='/')
+        return render.error(i.msg, i.back_link)
 
 
 def dedupe(items):
