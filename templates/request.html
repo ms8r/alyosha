@@ -6,9 +6,14 @@ $var title: Thify.org search specs
 
 $var cssfiles: static/styles.css
 
+$var jsfiles:
+
 <form name="main" method="post">
 
 <h1>Search parameters based on <em><a href="$ref_url">$ref_title</a></em></h1>
+
+$# hidden input field used to pass the Redis key for the WebArticle data on to request.POST()
+$:formDict['wa_key'].render()
 
 <div class="float-right">
 <input class="submit-button" type="submit" name="starsearch" value="Start search" />

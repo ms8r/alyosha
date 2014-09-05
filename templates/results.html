@@ -1,4 +1,4 @@
-$def with (wa, search_str, cat_src, results, back_link)
+$def with (rwa, search_str, cat_src, results, back_link)
 
 $var page_id: results-page
 
@@ -6,7 +6,7 @@ $var title: Thify.org - Results
 
 $var cssfiles: static/styles.css
 
-$var jsfiles: static/jquery-2.1.1.js static/code.js
+$var jsfiles: static/jquery-2.1.1.min.js static/code.js
 
 $code:
     # max. number of results to show per category:
@@ -45,7 +45,7 @@ $def cat_res(c_matches, c_discards, max_res):
 $if results:
     <h1>Recommended reading</h1>
     <div id="results-top-box">
-        <p>Based on the article <em><a href="$wa.url">$wa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
+        <p>Based on the article <em><a href="$rwa.url">$rwa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
     </div>
     <div class="spectrum">
         <table>
@@ -80,6 +80,8 @@ $if results:
             </tbody>
         </table>
     </div>
+    $# parameters for JS script:
+    <param id="wa-key" name="wa_key" value="$rwa.key" />
     $for k, v in cat_src.iteritems():
         $ v_str = ' '.join(v)
         <param class="cat-src" name="$k" value="$v_str" />

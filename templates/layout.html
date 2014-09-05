@@ -18,8 +18,8 @@ $ static_prefix = ''
     <link rel="shortcut icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
     <link rel="icon" href="$static_prefix/static/favicon.ico" type="image/x-icon">
     $if content.jsfiles:
-    $for f in content.jsfiles.split():
-        <script type="text/javascript" src="$static_prefix/$f"></script>
+        $for f in content.jsfiles.split():
+            <script type="text/javascript" src="$static_prefix/$f"></script>
 
 </head>
 

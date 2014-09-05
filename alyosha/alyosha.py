@@ -398,6 +398,7 @@ class RedisWA(object):
         if not values:
             raise RedisGetError(
                     "failed to get any values under key '{0}'".format(key))
+        self.key = key
         self.url = values['url']
         self.title = values['title']
         self.wcount = int(values['wcount'])

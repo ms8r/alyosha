@@ -1,3 +1,4 @@
+import os
 from urllib import urlencode
 import urlparse
 import logging
@@ -24,6 +25,12 @@ MATCH_SCORE_LEN = 20
 GOOGLE_DELAY = 1
 
 logging.basicConfig(level=logging.DEBUG)
+
+# Connect to Redis:
+redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
+urlparse.uses_netloc.append('redis')
+url = urlparse.urlparse(redis_url)
+my_redis = redis.StrictRedis(host=url.hostname, port=url.port)
 
 render = web.template.render('templates/', base='layout')
 
@@ -83,12 +90,6 @@ formDict = {
         'match_criteria': matchCriteriaForm,
 }
 
-# Connect to Redis:
-redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
-urlparse.uses_netloc.append('redis')
-url = urlparse.urlparse(redis_url)
-my_redis = redis.StrictRedis(host=url.hostname, port=url.port)
-
 
 class index(object):
 
@@ -96,8 +97,6 @@ class index(object):
         return render.index(urlForm)
 
     def POST(self):
-
-        global wa
 
         if not urlForm.validates():
             return render.index(urlForm)
@@ -161,6 +160,13 @@ class request(object):
         # store essentials on Redis:
         wa_key = al.RedisWA.redis_store(my_redis, wa.url, wa.title, wa.wcount,
                 wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
+        formDict['wa_key'] = form.Form(form.Textbox(
+                'waKey',
+                form.notnull,
+                description='',
+                id='wa-key',
+                value=wa_key,
+                style="display: none;"))
 
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
@@ -178,8 +184,7 @@ class request(object):
                 size='40', id='cust-search-entry'))
         formDict['search_strings'] = form.Form(*radio_buttons)
 
-        return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url,
-                wa_key)
+        return render.request(formDict, REF.src_cats.keys(), wa.title, wa.url)
 
     def POST(self):
 
@@ -193,11 +198,14 @@ class request(object):
                     return render.request(formDict)
         form_data = web.input()
 
+        wa_key = form_data.waKey
+
         search_str = form_data.SearchStr
         if search_str == request.cust_search_prompt:
             search_str = form_data.CustSearch
 
         params = {
+                'wa_key': wa_key,
                 'search_str': search_str,
                 'sources': encode_src_sel(form_data),
                 'match_score': int(form_data.matchScore),
@@ -211,12 +219,20 @@ class request(object):
 class results(object):
 
     def GET(self):
-        i = web.input(search_str=None, sources=0, match_score=0, min_wc=0,
-                back_days=None)
-        logging.debug("results parameter: search_str='%s', sources=%s, "
-                      "match_score=%s, min_wc=%s, back_days=%s",
-                      i.search_str, i.sources, i.match_score, i.min_wc,
-                      i.back_days)
+
+        i = web.input(wa_key=None, search_str=None, sources=0, match_score=0,
+                min_wc=0, back_days=None)
+        logging.debug("results parameter: wa_key=%s, search_str='%s', "
+                "sources=%s, match_score=%s, min_wc=%s, back_days=%s",
+                i.wa_key, i.search_str, i.sources, i.match_score, i.min_wc,
+                i.back_days)
+        # get WebArticle data from Redis:
+        try:
+            rwa = al.RedisWA(my_redis, i.wa_key)
+        except al.RedisGetError as e:
+            logging.debug("%s: %s", type(e), e.message)
+            raise
+
         results = {}
         # we need to construct a dict of source categories mapped to the
         # correponding (masked) source lists to be passed by render to the
@@ -235,7 +251,7 @@ class results(object):
             #   logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
             results[cat] = (None, None)
 
-        return render.results(wa, i.search_str, cat_sources, results,
+        return render.results(rwa, i.search_str, cat_sources, results,
                 '/request')
 
 
