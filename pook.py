@@ -261,6 +261,7 @@ class score_matches(object):
 
     def GET(self):
         i = web.input(wa_key=None, search_str=None, src=None, job_id=None)
+        web.header('Content-Type', 'application/json')
         if i.get('job_id'):
             logging.debug("score_matches called with '%s'", i)
             job = score_matches.q.fetch_job(i.job_id)

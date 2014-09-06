@@ -26,7 +26,9 @@ $(document).ready(function() {
             score_board[cat_src[cat][i]] = {
                 'cat': cat,
                 'job_id': null,
-                'status': 0,
+                'status': 0,    // 1: submitted, got job_id
+                                // 2: have result
+                                // 3: published
                 'result': null
             };
             score_board_size++;
@@ -44,6 +46,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(json) {
                 score_board[json.src].job_id = json.job_id;
+                score_board[json.src].status = 1;
             },
             eror: function(xhr, status, errorThrown) {
                 console.log("Error: " + errorThrown);
@@ -60,7 +63,7 @@ $(document).ready(function() {
     function pollForID(src) {
         return function() {
             var fetch_timeout = 500;
-            if (score_board[src].job_id == null) {
+            if (score_board[src].status == 0) {
                 setTimeout(pollForID(src), fetch_timeout);
             }
             else {
@@ -71,7 +74,7 @@ $(document).ready(function() {
                     dataType: 'json',
                     success: function(json) {
                         if (json.status == 'finished') {
-                            score_board[json.src].status = 1;
+                            score_board[json.src].status = 2;
                             score_board[json.src].result = json.result;
                         }
                         else {
@@ -96,12 +99,36 @@ $(document).ready(function() {
         setTimeout(pollForID(src), 1000);
     }
 
+    function insert_result(res_src) {
+        var res_cat = score_board[res_src].cat;
+        var res_score = parseInt(score_board[res_src].result, 10);
+        var position = 0;
+        for (var src in score_board) {
+            var sbs = score_board[src];
+            if (sbs.cat == res_cat && sbs.status == 3) {
+                if (parseInt(sbs.result, 10) <= res_score) {
+                    ++position;
+                }
+            }
+        }
+        console.log("insert_results: " + res_src + " " + res_score + " " + position);
+        if (position == 0) {
+            $("ul#" + res_cat + "-match").append(
+                    "<li>" + res_src + ": " + res_score + "</li>");
+        }
+        else {
+            $("ul#" + res_cat + "-match li").eq(position - 1).after(
+                    "<li>" + res_src + ": " + res_score + "</li>");
+        }
+    }
+
     // check score board:
     function keep_score() {
-        var fin_count = 0;
         for (var src in score_board) {
-            if (score_board[src].status == 1) {
+            if (score_board[src].status == 2) {
                 ++fin_count;
+                insert_result(src);
+                score_board[src].status = 3;
             }
         }
         score_board_fill = fin_count / score_board_size;
@@ -112,6 +139,7 @@ $(document).ready(function() {
             setTimeout(keep_score, timeout);
         }
     }
+    var fin_count = 0;
     setTimeout(keep_score, 3000);
 
 });
