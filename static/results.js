@@ -57,42 +57,43 @@ $(document).ready(function() {
     }
 
     // now check for results:
-    var fetch_timeout = 500;
-    for (var src in score_board) {
-        function pollForID(src) {
-            return function() {
-                if (score_board[src].job_id == null) {
-                    setTimeout(pollForID(src), fetch_timeout);
-                }
-                else {
-                    $.ajax({
-                        url: 'scorematches',
-                        data: {'src': src, 'job_id': score_board[src].job_id},
-                        type: 'GET',
-                        dataType: 'json',
-                        success: function(json) {
-                            if (json.status == 'finished') {
-                                score_board[json.src].status = 1;
-                                score_board[json.src].result = json.result;
-                            }
-                            else {
-                                var timeout = fetch_timeout + 2000 * (1 - score_board_fill);
-                                setTimeout(pollForID(src), timeout);
-                            }
-                        },
-                        eror: function(xhr, status, errorThrown) {
-                            console.log("Error: " + errorThrown);
-                            console.log("Status: " + status);
-                            console.dir(xhr);
-                        },
-                        complete: function(xhr, status) {
-                            console.log("fetched: " + xhr.responseText);
+    function pollForID(src) {
+        return function() {
+            var fetch_timeout = 500;
+            if (score_board[src].job_id == null) {
+                setTimeout(pollForID(src), fetch_timeout);
+            }
+            else {
+                $.ajax({
+                    url: 'scorematches',
+                    data: {'src': src, 'job_id': score_board[src].job_id},
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(json) {
+                        if (json.status == 'finished') {
+                            score_board[json.src].status = 1;
+                            score_board[json.src].result = json.result;
                         }
-                    });
-                }
-            };
-        }
-        setTimeout(pollForID(src), fetch_timeout);
+                        else {
+                            var timeout = fetch_timeout + 2000 * (1 - score_board_fill);
+                            setTimeout(pollForID(src), timeout);
+                        }
+                    },
+                    eror: function(xhr, status, errorThrown) {
+                        console.log("Error: " + errorThrown);
+                        console.log("Status: " + status);
+                        console.dir(xhr);
+                    },
+                    complete: function(xhr, status) {
+                        console.log("fetched: " + xhr.responseText);
+                    }
+                });
+            }
+        };
+    }
+
+    for (var src in score_board) {
+        setTimeout(pollForID(src), 1000);
     }
 
     // check score board:
@@ -105,13 +106,13 @@ $(document).ready(function() {
         }
         score_board_fill = fin_count / score_board_size;
         if (fin_count < score_board_size) {
-            var timeout = fetch_timeout + 2000 * (1 - score_board_fill);
+            var timeout = 1000 + 2000 * (1 - score_board_fill);
             console.log("fin_count: " + fin_count);
             console.log("setting keep_score timeout to " + timeout + "ms");
             setTimeout(keep_score, timeout);
         }
     }
-    setTimeout(keep_score, fetch_timeout);
+    setTimeout(keep_score, 3000);
 
 });
 
