@@ -260,16 +260,19 @@ class score_matches(object):
     q = rq.Queue(connection=redis_conn)
 
     def GET(self):
-        i = web.input(wa_key=None, search_str=None, job_id=None)
+        i = web.input(wa_key=None, search_str=None, src=None, job_id=None)
         if i.get('job_id'):
-            logging.debug("score_matches called with key_id '%s'", i.job_id)
+            logging.debug("score_matches called with '%s'", i)
             job = score_matches.q.fetch_job(i.job_id)
-            return json.dumps({'status': job.get_status(),
-                               'result': job.result})
+            s = json.dumps({'src': i.src, 'status': job.get_status(),
+                'result': job.result})
+            logging.debug("JSON string: %s", s)
+            return s
+
         else:
             logging.debug("score matches called with %s", i)
             j = score_matches.q.enqueue(utils.chill)
-            s = json.dumps({'job_id': j.id})
+            s = json.dumps({'src': i.src, 'job_id': j.id})
             logging.debug("JSON string: %s", s)
             return s
 
