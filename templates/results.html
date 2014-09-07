@@ -66,18 +66,18 @@ $def cat_res(c_matches, c_discards, max_res):
             $for c in cat_src:
                 $# m, __ = results[c]
                 <td>
-                    <ul id="$c-match">
+                    <div id="$c-match">
                     $# :cat_res(m, None, max_res=max_res)
-                    </ul>
+                    </div>
                 </td>
             </tr>
             <tr>
             $for c in cat_src:
                 $# __, d = results[c]
                 <td>
-                    <ul id="$c-discard">
+                    <div id="$c-discard">
                     $# :cat_res(None, d, max_res=max_res)
-                    </ul>
+                    </div>
                 </td>
             </tr>
         </tbody>

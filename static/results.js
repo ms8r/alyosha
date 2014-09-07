@@ -14,7 +14,10 @@ $(document).ready(function() {
     var params = $("param.cat-src");
     for (var i = 0; i < params.length; i++) {
         var cat = params.eq(i).attr("name");
-        cat_src[cat] = params.eq(i).attr("value").split(' ');
+        var src_str = params.eq(i).attr("value");
+        if (src_str.length > 0) {
+            cat_src[cat] = src_str.split(' ');
+        }
     }
 
     // set up "score board"
@@ -100,7 +103,6 @@ $(document).ready(function() {
     for (var src in score_board) {
         setTimeout(pollForID(src), 1000);
     }
-/*
 
     // setup results by category:
     var cat_res = {};
@@ -113,21 +115,25 @@ $(document).ready(function() {
         return b.score- a.score;
     }
 
+    function render_cat_result(cres) {
+        // renders results for a specific category and returns html
+        var num_items = cres.length;
+        var ht = "";
+        for (i = 0; i < num_items; i++) {
+            ht = ht + '<h3><a href="' + cres[i]['url'] + '">' + cres[i]['title'] + '</a></h2>'
+                    + '<h4>' + cres[i]['link'] + '</h3>'
+                    + '<p class="match-score">' + cres[i]['wc'] + ' words, score: ' + cres[i]['score'].toFixed(2) + '</p>'
+                    + '<p class="res-description">' + cres[i]['desc'] + '</p>';
+        }
+        return ht;
+    }
+
     function insert_result(res_src) {
         var rsb = score_board[res_src];
-        cat_res[rsb.cat].push(
-                {'src': res_src,
-                 'score': rsb.result
-                });  // will ned to be extended to handle list of results
+        cat_res[rsb.cat] = cat_res[rsb.cat].concat(rsb.result);
         cat_res[rsb.cat].sort(compare_score);
         //now update HTML:
-        cat_html = "";
-        num_res = cat_res[rsb.cat].length;
-        for (var i = 0; i < num_res; i++ ) {
-            cat_html = cat_html + "<li>" + cat_res[rsb.cat][i].src + ": "
-                                + cat_res[rsb.cat][i].score + "</li>";
-        }
-        $("ul#" + rsb.cat + "-match").html(cat_html);
+        $("div#" + rsb.cat + "-match").html(render_cat_result(cat_res[rsb.cat]));
     }
 
     // check score board:
@@ -149,5 +155,4 @@ $(document).ready(function() {
     }
     var fin_count = 0;
     setTimeout(keep_score, 3000);
-*/
 });
