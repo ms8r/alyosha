@@ -2,7 +2,7 @@ $(document).ready(function() {
 
     // extract parameters for sources and wa_key:
     // NOTE: need to also provide prios so we can sequence
-    // submissions accordingly
+    // submissions accordingly (or pre-sort params within cat)
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
         search_str: $("param#search-str").attr("value"),
@@ -20,7 +20,7 @@ $(document).ready(function() {
     // set up "score board"
     var score_board = {};
     var score_board_size = 0;
-    for (cat in cat_src) {
+    for (var cat in cat_src) {
         var num_src = cat_src[cat].length;
         for (var i = 0; i < num_src; i++) {
             score_board[cat_src[cat][i]] = {
@@ -78,7 +78,8 @@ $(document).ready(function() {
                             score_board[json.src].result = json.result;
                         }
                         else {
-                            var timeout = fetch_timeout + 2000 * (1 - score_board_fill);
+                            var timeout = fetch_timeout +
+                                          2000 * (1 - score_board_fill);
                             setTimeout(pollForID(src), timeout);
                         }
                     },
@@ -99,27 +100,32 @@ $(document).ready(function() {
         setTimeout(pollForID(src), 1000);
     }
 
+    // setup results by category:
+    var cat_res = {};
+    for (var cat in cat_src) {
+        cat_res[cat] = [];
+    }
+
+    function compare_score(a, b) {
+        // a and b will be elements of one of cat_res' result lists
+        return b.score- a.score;
+    }
+
     function insert_result(res_src) {
-        var res_cat = score_board[res_src].cat;
-        var res_score = parseInt(score_board[res_src].result, 10);
-        var position = 0;
-        for (var src in score_board) {
-            var sbs = score_board[src];
-            if (sbs.cat == res_cat && sbs.status == 3) {
-                if (parseInt(sbs.result, 10) <= res_score) {
-                    ++position;
-                }
-            }
+        var rsb = score_board[res_src];
+        cat_res[rsb.cat].push(
+                {'src': res_src,
+                 'score': rsb.result
+                });  // will ned to be extended to handle list of results
+        cat_res[rsb.cat].sort(compare_score);
+        //now update HTML:
+        cat_html = "";
+        num_res = cat_res[rsb.cat].length;
+        for (var i = 0; i < num_res; i++ ) {
+            cat_html = cat_html + "<li>" + cat_res[rsb.cat][i].src + ": "
+                                + cat_res[rsb.cat][i].score + "</li>";
         }
-        console.log("insert_results: " + res_src + " " + res_score + " " + position);
-        if (position == 0) {
-            $("ul#" + res_cat + "-match").append(
-                    "<li>" + res_src + ": " + res_score + "</li>");
-        }
-        else {
-            $("ul#" + res_cat + "-match li").eq(position - 1).after(
-                    "<li>" + res_src + ": " + res_score + "</li>");
-        }
+        $("ul#" + rsb.cat + "-match").html(cat_html);
     }
 
     // check score board:
@@ -143,4 +149,3 @@ $(document).ready(function() {
     setTimeout(keep_score, 3000);
 
 });
-
