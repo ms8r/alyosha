@@ -304,7 +304,7 @@ class RedisWA(object):
     Attributes (will be set by `redis_retrieve`):
     -----------
     r : Redis instance
-        Redis instamce where the has for thos object is stored.
+        Redis instance where the has for thos object is stored.
     key : str
         Key under which the hash for this obkect os stored on Redis.
     url : str
@@ -340,7 +340,7 @@ class RedisWA(object):
             self.search_str_opts = None
 
     @staticmethod
-    def redis_store(r, url, title, wcount, stem_tops, search_str_opts):
+    def redis_store(r, url, title, wcount, stem_tops, search_str_opts=None):
         """
         Packs the passed-in values into a hash which it pushes onto a Redis
         server and returns the key.
@@ -349,7 +349,7 @@ class RedisWA(object):
         ----------
         r : Redis instance
             The Redis server to push to, created via `redis.Redis()` or
-            `redis.StricRedis()`.
+            `redis.StrictRedis()`.
         url : str
             The articles URL; will be SHA1'd and returned as the
             key to the WebArticle hash stored on Redis.
@@ -375,7 +375,8 @@ class RedisWA(object):
         `RedisSetError` if `r.hmset()` does not return `True`
         """
         key = hashlib.sha1(url).hexdigest()
-
+        if not search_str_opts:
+            search_str_opts = []
         mapping = {}
         mapping['url'] = url
         mapping['title'] = title
@@ -712,6 +713,90 @@ def phrase_counts(word_list, phrase_length=2, min_count=0):
     return [r for r in result if r[1] >= min_count]
 
 
+def score_matches(wa, sources, search_str, back_days=None, num_tokens=20,
+        min_wc=0, min_match=0, num_matches=1, exact=False, delay=0,
+        encoding=None, *search_ops, **search_kwds):
+    """
+    Returns a list of dicts with ranked search results for matches against
+    `wa`.
+
+    Arguments:
+    ---------
+    wa : WebArticle or RedisWA object
+        Reference article against which to match results.
+        WebArticle.match_score() will be used to evaluate content match.
+    sources : sequence
+        List of strings with sites to search.
+    search_str : str
+        Query to be submitted; will be url quoted before appending to url
+    back_days : int
+        If specified a `daterange' operator will be appended to the search
+        string, restricting the search results to documents that have been
+        modified no longer than `back_days` days ago. Note that this will
+        also exclude any documents which are lacking date information.
+    num_tokens : int
+        Number of tokens (stemmed words) to be included into match scoring.
+    min_wc : int
+        Minimum length (in number of words) for a match to be eligible.
+    min_match : float [0..1]
+        Minimum match score with `wa` for a search result to be eligible.
+    num_matches : int
+        Number of matches to score for each src.
+    exact : Boolean
+        If `True` will ignore search results in which Google relaxed the search
+        query (e.g. by removing quotes from phrases).
+    delay : number
+        If `delay > 0` there will be a random delay between 0 and `delay`
+        seconds in between calls to Google. This can be used to mitigate the
+        risk of being blocked by Google.
+    encoding : str
+        If an encoding is specified (e.g. 'utf-8'), strings in the return
+        value will be encoded accordingly. If encoding is `None` they will be
+        returned a sunicode. Encoding can be required to enable pickling or
+        to send the results as strings via HTTP.
+    search_ops : list of tuples
+        Will be passed to `GoogleSerp` constructor; see
+        `GoogleSerp.__init__` docstring.
+    search_kwds : dict
+        Will be passed to `GoogleSerp` constructor; see
+        `GoogleSerp.__init__` docstring.
+
+    Returns:
+    --------
+    Tuple (matches, discards) with each item being a list af dicts with search
+    results ranked by content match. Dict keys are 'src', 'wc', 'score',
+    'title', 'url', 'link', 'desc'. `matches` includes items that meet the
+    `min_match` and `min_wc` criteria, `dicards` the rest.
+    """
+    matches = []
+    discards = []
+    for src in sources:
+        try:
+            if delay > 0:
+                time.sleep(delay * random.random())
+            # TODO: SiteResult cutoff_date attrib that can be used to filter
+            # matches
+            sr = SiteResults(src, search_str=search_str, back_days=back_days,
+                    exact=exact, *search_ops, **search_kwds)
+        except (EmptySearchResult, ResultParsingError,
+                PageRetrievalError) as e:
+            logging.debug("SiteResults: %s: %s", type(e), e.message)
+            continue
+        logging.debug("%s: found %d matches", src, sr.resnum)
+        m, d = get_match(wa, sr, min_wc=min_wc, min_match=min_match,
+                num_matches=num_matches, num_tries=num_matches,
+                encoding=encoding)
+        matches += m
+        discards += d
+        logging.debug("found %d match(es) and %d discard(s) at %s",
+                len(m), len(d), src)
+
+    return (sorted(matches, key=lambda k: k['score'], reverse=True),
+            sorted(discards, key=lambda k: k['score'], reverse=True))
+
+
+# NOTE: best_matches can eventually be retired (performed only partial search
+# to limit response time prior to AJAX soluton for results
 def best_matches(wa, sources, search_str, back_days=None,
         min_wc=0, min_match=0, num_matches=1, exact=False, delay=0,
          *search_ops, **search_kwds):
@@ -757,8 +842,10 @@ def best_matches(wa, sources, search_str, back_days=None,
 
     Returns:
     --------
-    List af dicts with search results ranked by content match. Dict
-    keys are 'src', 'wc', 'score', 'title', 'url', 'link', 'desc'.
+    Tuple (matches, discards) with each item being a list af dicts with search
+    results ranked by content match. Dict keys are 'src', 'wc', 'score',
+    'title', 'url', 'link', 'desc'. `matches` includes items that meet the
+    `min_match` and `min_wc` criteria, `dicards` the rest.
     """
     matches = []
     discards = []
@@ -790,12 +877,18 @@ def best_matches(wa, sources, search_str, back_days=None,
             sorted(discards, key=lambda k: k['score'], reverse=True))
 
 
-def get_match(wa, sr, min_wc=0, min_match=0, num_matches=1, num_tries=10):
+def get_match(wa, sr, num_tokens=20, min_wc=0, min_match=0, num_matches=1,
+              num_tries=10, encoding=None):
     """
-    Will try to retrieve up to `num_matches` a match from SiteResult object
-    `sr` with a minimum length of `min_wc` words and a minimum content match of
-    `min_match` against WebArticle object `wa`. Will try at most `num_tries`
-    elements in `sr` to produce a match.
+    Will try to retrieve up to `num_matches` from SiteResult object `sr` with a
+    minimum length of `min_wc` words and a minimum content match of `min_match`
+    against WebArticle object `wa` (which can also be a RedisWA object). Will
+    try at most `num_tries` elements in `sr` to produce a match.  `num_words`
+    is the number of tokens (stemmed words) to use for calculating the match
+    score. If an encoding is specified (e.g. 'utf-8'), strings in the return
+    value will be encoded accordingly. If encoding is `None` they will be
+    returned a sunicode. Encoding can be required to enable pickling or to
+    send the results as strings via HTTP.
 
     Returns a tuple `(m, d)` where `m` is a list of dicts with the matches (if
     any), and `d` is a list of dicts for the items that were discarded because
@@ -821,7 +914,8 @@ def get_match(wa, sr, min_wc=0, min_match=0, num_matches=1, num_tries=10):
             logging.debug("%s: discarding '%s', only %d words",
                           sr.site, title, wb.wcount)
             continue
-        match_score = wa.match_score(wb, num_words=20)
+        # calling match_score on wb baceaus wa could be a RedisWA object:
+        match_score = wb.match_score(wa, num_words=num_tokens)
         if match_score >= min_match:
             matches.append({'src': sr.site, 'wc': wb.wcount, 'score':
                     match_score, 'title': title, 'url': url, 'link': r['link'],
@@ -832,6 +926,16 @@ def get_match(wa, sr, min_wc=0, min_match=0, num_matches=1, num_tries=10):
             discards.append({'src': sr.site, 'wc': wb.wcount, 'score':
                     match_score, 'title': title, 'url': url, 'link': r['link'],
                     'desc': r['desc']})
+    if encoding:
+        for m in matches:
+            for r in m:
+                if isinstance(m[r], unicode):
+                    m[r] = m[r].encode('utf-8')
+        for d in discards:
+            for r in d:
+                if isinstance(d[r], unicode):
+                    d[r] = d[r].encode('utf-8')
+
 
     return (sorted(matches, key=lambda k: k['score'], reverse=True),
             sorted(discards, key=lambda k: k['score'], reverse=True))

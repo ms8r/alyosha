@@ -87,8 +87,9 @@ $# parameters for JS script:
 <param id="wa-key" name="wa_key" value="$rwa.key" />
 <param id="search-str" name="search_str" value='$search_str' />
 $for k, v in cat_src.iteritems():
-    $ v_str = ' '.join(v)
-    <param class="cat-src" name="$k" value="$v_str" />
+    $if v:
+        $ v_str = ' '.join(v)
+        <param class="cat-src" name="$k" value="$v_str" />
 <param id="match-score" name="match_score" value="$match_score" />
 <param id="min-wc" name="min_wc" value="$min_wc" />
 <param id="back-days" name="back_days" value="$back_days" />

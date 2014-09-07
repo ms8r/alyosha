@@ -261,19 +261,25 @@ class score_matches(object):
 
     def GET(self):
         i = web.input(wa_key=None, search_str=None, src=None, job_id=None)
+        logging.debug("score_matches called with '%s'", i)
         web.header('Content-Type', 'application/json')
         if i.get('job_id'):
-            logging.debug("score_matches called with '%s'", i)
+            # they want us to check for results...
             job = score_matches.q.fetch_job(i.job_id)
-            s = json.dumps({'src': i.src, 'status': job.get_status(),
-                'result': job.result})
+            status = job.get_status()
+            result = (job.result[0] if status == rq.job.Status.FINISHED
+                      else '')
+            s = json.dumps({'src': i.src, 'job_id': i.job_id, 'status': status,
+                'result': result})
             logging.debug("JSON string: %s", s)
             return s
 
         else:
-            logging.debug("score matches called with %s", i)
-            j = score_matches.q.enqueue(utils.chill)
-            s = json.dumps({'src': i.src, 'job_id': j.id})
+            # get worker busy; first retrieve original article from Redis:
+            rwa = al.RedisWA(r=redis_conn, key=i.wa_key)
+            job = score_matches.q.enqueue(al.score_matches, rwa, [i.src],
+                    i.search_str, num_matches=3, encoding='utf-8')
+            s = json.dumps({'src': i.src, 'job_id': job.id})
             logging.debug("JSON string: %s", s)
             return s
 

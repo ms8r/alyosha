@@ -76,6 +76,7 @@ $(document).ready(function() {
                         if (json.status == 'finished') {
                             score_board[json.src].status = 2;
                             score_board[json.src].result = json.result;
+                            console.dir(json.result)
                         }
                         else {
                             var timeout = fetch_timeout +
@@ -99,6 +100,7 @@ $(document).ready(function() {
     for (var src in score_board) {
         setTimeout(pollForID(src), 1000);
     }
+/*
 
     // setup results by category:
     var cat_res = {};
@@ -147,5 +149,5 @@ $(document).ready(function() {
     }
     var fin_count = 0;
     setTimeout(keep_score, 3000);
-
+*/
 });
