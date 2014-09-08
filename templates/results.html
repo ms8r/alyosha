@@ -6,41 +6,7 @@ $var title: Thify.org - Results
 
 $var cssfiles: static/styles.css
 
-$var jsfiles: static/jquery-2.1.1.min.js static/results.js
-
-$code:
-    # max. number of results to show per category:
-    max_res = 3
-
-$def render_res(r):
-    $code:
-        score = "%.2f" % r['score']
-
-    <h3><a href="$r['url']">$r['title']</a></h2>
-    <h4>$r['link']</h3>
-    <p class="match-score">$r['wc'] words, score: $score</p>
-    <p class="res-description">$r['desc']</p>
-    
-
-$def cat_res(c_matches, c_discards, max_res):
-    $if c_matches is None:
-        $pass
-    $elif not c_matches:
-        <p><em>No full matches found in this category</em></p>
-    $else:
-        $code:
-            n = min(max_res, len(c_matches))
-
-        $for r in c_matches[:n]:
-            $:render_res(r)
-
-    $if c_discards:
-        <p><em>Articles that failed to meet the full match criteria</em></p>
-        $code:
-            n = min(max_res, len(c_discards))
-
-        $for r in c_discards[:n]:
-            $:render_res(r)
+$var jsfiles: static/jquery-2.1.1.min.js static/pook.js
 
 <h1>Recommended reading</h1>
 <div id="results-top-box">
@@ -64,19 +30,15 @@ $def cat_res(c_matches, c_discards, max_res):
         <tbody>
             <tr>
             $for c in cat_src:
-                $# m, __ = results[c]
                 <td>
                     <div id="$c-match">
-                    $# :cat_res(m, None, max_res=max_res)
                     </div>
                 </td>
             </tr>
             <tr>
             $for c in cat_src:
-                $# __, d = results[c]
                 <td>
                     <div id="$c-discard">
-                    $# :cat_res(None, d, max_res=max_res)
                     </div>
                 </td>
             </tr>
