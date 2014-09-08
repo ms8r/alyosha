@@ -278,7 +278,8 @@ class score_matches(object):
             # get worker busy; first retrieve original article from Redis:
             rwa = al.RedisWA(r=redis_conn, key=i.wa_key)
             job = score_matches.q.enqueue(al.score_matches, rwa, [i.src],
-                    i.search_str, num_matches=3, encoding='utf-8')
+                    i.search_str, num_matches=3,
+                    delay=GOOGLE_DELAY, encoding='utf-8')
             s = json.dumps({'src': i.src, 'job_id': job.id})
             logging.debug("JSON string: %s", s)
             return s

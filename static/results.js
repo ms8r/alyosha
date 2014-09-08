@@ -6,9 +6,9 @@ $(document).ready(function() {
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
         search_str: $("param#search-str").attr("value"),
-        match_score: $("param#match-score").attr("value"),
-        min_wc: $("param#min-wc").attr("value"),
-        back_days: $("param#back-days").attr("value")
+        match_score: parseFloat($("param#match-score").attr("value")),
+        min_wc: parseInt($("param#min-wc").attr("value"), 10),
+        back_days: parseInt($("param#back-days").attr("value"), 10)
     };
     var cat_src = {};
     var params = $("param.cat-src");
@@ -79,7 +79,6 @@ $(document).ready(function() {
                         if (json.status == 'finished') {
                             score_board[json.src].status = 2;
                             score_board[json.src].result = json.result;
-                            console.dir(json.result)
                         }
                         else {
                             var timeout = fetch_timeout +
@@ -115,11 +114,16 @@ $(document).ready(function() {
         return b.score- a.score;
     }
 
-    function render_cat_result(cres) {
+    function render_cat_result(cres, min_match, min_wc) {
         // renders results for a specific category and returns html
         var num_items = cres.length;
         var ht = "";
+        console.log("reder_cat_result: min_match=" + min_match 
+                    + ", min_wc=" + min_wc);
         for (i = 0; i < num_items; i++) {
+            if (cres[i].score < min_match || cres[i].wc < min_wc) {
+                continue;
+            }
             ht = ht + '<h3><a href="' + cres[i]['url'] + '">' + cres[i]['title'] + '</a></h2>'
                     + '<h4>' + cres[i]['link'] + '</h3>'
                     + '<p class="match-score">' + cres[i]['wc'] + ' words, score: ' + cres[i]['score'].toFixed(2) + '</p>'
@@ -128,12 +132,13 @@ $(document).ready(function() {
         return ht;
     }
 
-    function insert_result(res_src) {
+    function insert_result(res_src, min_match, min_wc) {
         var rsb = score_board[res_src];
         cat_res[rsb.cat] = cat_res[rsb.cat].concat(rsb.result);
         cat_res[rsb.cat].sort(compare_score);
         //now update HTML:
-        $("div#" + rsb.cat + "-match").html(render_cat_result(cat_res[rsb.cat]));
+        $("div#" + rsb.cat + "-match").html(
+                render_cat_result(cat_res[rsb.cat], min_match, min_wc));
     }
 
     // check score board:
@@ -141,7 +146,7 @@ $(document).ready(function() {
         for (var src in score_board) {
             if (score_board[src].status == 2) {
                 ++fin_count;
-                insert_result(src);
+                insert_result(src, pmap.match_score/100, pmap.min_wc);
                 score_board[src].status = 3;
             }
         }
