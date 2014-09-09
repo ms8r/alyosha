@@ -180,16 +180,22 @@ class WebArticle(object):
             raise PageRetrievalError(ref_url)
         if not result.status_code == requests.codes.ok:
             raise PageRetrievalError(ref_url)
-
-        parsed = html.fromstring(result.text)
+        ht = result.text
+        ht = ht.encode(result.encoding) if isinstance(ht, unicode) else ht
+        # need to parse only to check for excessive number of headings
+        parsed = html.fromstring(ht)
         if max([len(parsed.xpath('//h{0}'.format(i+1)))
                 for i in xrange(4)]) > WebArticle.max_headings:
             logging.debug("too many headings in %s, raising exception",
                     ref_url)
             raise NotAnArticleError(ref_url)
-
+        # now get the article content
         g = Goose()
-        article = g.extract(raw_html=result.text)
+        try:
+            article = g.extract(raw_html=ht)
+        except ValueError:
+            logging.debug("could not extract article from %s" % ref_url)
+            raise ArticleExtractionError(ref_url)
         self.title = article.title
         self.text = article.cleaned_text
         if not self.text:

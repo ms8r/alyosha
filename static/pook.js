@@ -29,9 +29,10 @@ $(document).ready(function() {
             score_board[cat_src[cat][i]] = {
                 'cat': cat,
                 'job_id': null,
-                'status': 0,    // 1: submitted, got job_id
-                                // 2: have result
-                                // 3: published
+                'status': 0,    //  1: submitted, got job_id
+                                //  2: have result
+                                //  3: published
+                                // -1: failed
                 'result': null
             };
             score_board_size++;
@@ -76,14 +77,19 @@ $(document).ready(function() {
                     type: 'GET',
                     dataType: 'json',
                     success: function(json) {
-                        if (json.status == 'finished') {
-                            score_board[json.src].status = 2;
-                            score_board[json.src].result = json.result;
-                        }
-                        else {
-                            var timeout = fetch_timeout +
-                                          2000 * (1 - score_board_fill);
-                            setTimeout(pollForID(src), timeout);
+                        switch (json.status) {
+                            case 'finished' :
+                                score_board[json.src].status = 2;
+                                score_board[json.src].result = json.result;
+                                break;
+                            case 'failed':
+                                score_board[json.src].status = -1;
+                                score_board[json.src].result = [];
+                                break;
+                            default:
+                                var timeout = fetch_timeout +
+                                              2000 * (1 - score_board_fill);
+                                setTimeout(pollForID(src), timeout);
                         }
                     },
                     eror: function(xhr, status, errorThrown) {
@@ -118,7 +124,7 @@ $(document).ready(function() {
         // renders results for a specific category and returns html
         var num_items = cres.length;
         var ht = "";
-        console.log("reder_cat_result: min_match=" + min_match 
+        console.log("reder_cat_result: min_match=" + min_match
                     + ", min_wc=" + min_wc);
         for (i = 0; i < num_items; i++) {
             if (cres[i].score < min_match || cres[i].wc < min_wc) {
@@ -149,8 +155,11 @@ $(document).ready(function() {
                 insert_result(src, pmap.match_score/100, pmap.min_wc);
                 score_board[src].status = 3;
             }
+            if (score_board[src].status == -1) {
+                ++fail_count;
+            }
         }
-        score_board_fill = fin_count / score_board_size;
+        score_board_fill = (fin_count + fail_count) / score_board_size;
         if (fin_count < score_board_size) {
             var timeout = 1000 + 2000 * (1 - score_board_fill);
             console.log("fin_count: " + fin_count);
@@ -159,5 +168,6 @@ $(document).ready(function() {
         }
     }
     var fin_count = 0;
+    var fail_count = 0;
     setTimeout(keep_score, 3000);
 });
