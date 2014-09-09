@@ -31,9 +31,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Connect to Redis and define expiry in seconds:
 redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
-urlparse.uses_netloc.append('redis')
-url = urlparse.urlparse(redis_url)
-redis_conn = redis.StrictRedis(host=url.hostname, port=url.port)
+# urlparse.uses_netloc.append('redis')
+# url = urlparse.urlparse(redis_url)
+# redis_conn = redis.StrictRedis(host=url.hostname, port=url.port)
+redis_conn = redis.from_url(redis_url)
 REDIS_EXPIRE = 1000
 
 render = web.template.render('templates/', base='layout')
