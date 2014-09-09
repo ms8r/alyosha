@@ -4,15 +4,24 @@ $var page_id: results-page
 
 $var title: Thify.org - Results
 
-$var cssfiles: static/styles.css
+$var cssfiles: static/styles.css static static/jquery-ui.min.css static/jquery-ui.structure.min.css static/jquery-ui.theme.min.css
 
-$var jsfiles: static/jquery-1.11.1.min.js static/pook.js
+$var jsfiles: static/jquery-1.11.1.min.js static/pook.js static/jquery-ui.min.js
 
 <h1>Recommended reading</h1>
-<div id="results-top-box">
-    <p>Based on the article <em><a href="$rwa.url">$rwa.title</a></em>, a search for <em>'$search_str'</em> yields the following results:</p>
+<div id="progress-box">
+    <p>Looking for articles similar to <em><a href="$rwa.url">$rwa.title</a></em>, based on a search for <em>'$search_str'</em> ...</p>
+    <center>
+        <div id="progress-text" class="do-not-show">
+        </div>
+        <div id="progress-bar" class="do-not-show">
+        </div>
+    </center>
 </div>
-<div class="spectrum">
+<div id="results-top-box" class="do-not-show">
+    <p>Found the following matches for the article <em><a href="$rwa.url">$rwa.title</a></em>, based on a search for <em>'$search_str'</em>:</p>
+</div>
+<div class="spectrum do-not-show">
     <table>
         <thead>
             <tr>
@@ -35,17 +44,9 @@ $var jsfiles: static/jquery-1.11.1.min.js static/pook.js
                     </div>
                 </td>
             </tr>
-            <tr>
-            $for c in cat_src:
-                <td>
-                    <div id="$c-discard">
-                    </div>
-                </td>
-            </tr>
         </tbody>
     </table>
 </div>
-$# parameters for JS script:
 <param id="wa-key" name="wa_key" value="$rwa.key" />
 <param id="search-str" name="search_str" value='$search_str' />
 $for k, v in cat_src.iteritems():
@@ -55,5 +56,3 @@ $for k, v in cat_src.iteritems():
 <param id="match-score" name="match_score" value="$match_score" />
 <param id="min-wc" name="min_wc" value="$min_wc" />
 <param id="back-days" name="back_days" value="$back_days" />
-
-</div>

@@ -291,6 +291,20 @@ text-align: center;
 
 /*=== results page ===*/
 
+div.do-not-show {
+    display: none;
+}
+
+div#progress-text {
+    font-style: italic;
+    color: #555555;
+}
+
+div#progress-bar {
+    width: 50%;
+    margin: 20px 0 20px 0;
+}
+
 /* headings for search results */
 
 #results-page .spectrum h2

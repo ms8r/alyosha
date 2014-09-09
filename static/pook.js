@@ -52,7 +52,9 @@ $(document).ready(function() {
                 score_board[json.src].job_id = json.job_id;
                 score_board[json.src].status = 1;
             },
+            timeout: 5000,
             eror: function(xhr, status, errorThrown) {
+                score_board[xhr.responseJSON.src].status = -1;
                 console.log("Error: " + errorThrown);
                 console.log("Status: " + status);
                 console.dir(xhr);
@@ -92,7 +94,9 @@ $(document).ready(function() {
                                 setTimeout(pollForID(src), timeout);
                         }
                     },
+                    timeout: 5000,
                     eror: function(xhr, status, errorThrown) {
+                        score_board[xhr.responseJSON.src].status = -1;
                         console.log("Error: " + errorThrown);
                         console.log("Status: " + status);
                         console.dir(xhr);
@@ -124,8 +128,6 @@ $(document).ready(function() {
         // renders results for a specific category and returns html
         var num_items = cres.length;
         var ht = "";
-        console.log("reder_cat_result: min_match=" + min_match
-                    + ", min_wc=" + min_wc);
         for (i = 0; i < num_items; i++) {
             if (cres[i].score < min_match || cres[i].wc < min_wc) {
                 continue;
@@ -143,14 +145,31 @@ $(document).ready(function() {
         cat_res[rsb.cat] = cat_res[rsb.cat].concat(rsb.result);
         cat_res[rsb.cat].sort(compare_score);
         //now update HTML:
-        $("div#" + rsb.cat + "-match").html(
-                render_cat_result(cat_res[rsb.cat], min_match, min_wc));
+        var old_ht = $("div#" + rsb.cat + "-match").html();
+        var new_ht = render_cat_result(cat_res[rsb.cat], min_match,
+                                       min_wc);
+        if (new_ht.length > old_ht.length) {
+            $("div#" + rsb.cat + "-match").fadeOut("fast");
+            $("div#" + rsb.cat + "-match").html(new_ht);
+            $("div#" + rsb.cat + "-match").fadeIn("fast");
+        }
     }
+
+    $("#progress-text").html("<p>Searching " + score_board_size
+            + " sources ...</p>");
+    $("#progress-bar").progressbar({value: 1});
+    $("#progress-text").fadeIn("slow");
+    $("#progress-bar").fadeIn("slow");
 
     // check score board:
     function keep_score() {
         for (var src in score_board) {
             if (score_board[src].status == 2) {
+                if (fin_count == 0) {
+                    // switch on result
+                    //$(".spectrum").removeClass("do-not-show");
+                    $(".spectrum").fadeIn("slow");
+                }
                 ++fin_count;
                 insert_result(src, pmap.match_score/100, pmap.min_wc);
                 score_board[src].status = 3;
@@ -160,11 +179,24 @@ $(document).ready(function() {
             }
         }
         score_board_fill = (fin_count + fail_count) / score_board_size;
-        if (fin_count < score_board_size) {
-            var timeout = 1000 + 2000 * (1 - score_board_fill);
+        if (score_board_fill > 0.0001) {
+            $("#progress-text").html("<p>Searched "
+                    + (fin_count + fail_count) + " of "
+                    + score_board_size + " sources</p>");
+            $("#progress-bar").progressbar({value: score_board_fill * 100});
+        };
+        if ((fin_count + fail_count) < score_board_size) {
+            var timeout = 500 + 2000 * (1 - score_board_fill);
             console.log("fin_count: " + fin_count);
             console.log("setting keep_score timeout to " + timeout + "ms");
             setTimeout(keep_score, timeout);
+        }
+        else {
+            // switch off progress bar
+            // $("#progress-box").addClass("do-not-show");
+            $("#progress-box").slideUp("fast");
+            // $("#results-top-box").removeClass("do-not-show");
+            $("#results-top-box").fadeIn("fast");
         }
     }
     var fin_count = 0;

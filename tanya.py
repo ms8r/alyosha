@@ -3,6 +3,7 @@ from urllib import urlencode
 import urlparse
 import logging
 import json
+from collections import OrderedDict
 import web
 from web import form
 import rfc3987
@@ -232,23 +233,13 @@ class results(object):
             logging.debug("%s: %s", type(e), e.message)
             raise
 
-        results = {}
         # we need to construct a dict of source categories mapped to the
         # correponding (masked) source lists to be passed by render to the
         # page, so we can include it there as a JS variable.
-        cat_sources = {}
+        cat_sources = OrderedDict()
         for cat in REF.src_cats:
             cat_sources[cat] = REF.cat_sources(cat, sites_only=True,
                     sort_by='weight', mask=decode_src_sel(int(i.sources)))
-            # Note: each `results` entry will be a tuple (m, d) with m being a
-            # list of matches and d being a list of discards
-            #   results[cat] = al.best_matches(wa, cat_sources[cat], i.search_str,
-            #           back_days=int(i.back_days), min_wc=int(i.min_wc),
-            #           min_match=int(i.match_score) / 100.,
-            #           num_matches=NUM_MATCHES, exact=False, delay=GOOGLE_DELAY,
-            #           allintext=False)
-            #   logging.debug("%s: %d ranked results", cat, len(results[cat][0]))
-            results[cat] = (None, None)
 
         return render.results(
                 rwa, i.search_str, cat_sources, i.match_score, i.min_wc,
@@ -268,7 +259,7 @@ class score_matches(object):
             job = score_matches.q.fetch_job(i.job_id)
             status = job.get_status()
             result = (job.result[0] if status == rq.job.Status.FINISHED
-                      else '')
+                      and job.result else '')
             s = json.dumps({'src': i.src, 'job_id': i.job_id, 'status': status,
                 'result': result})
             logging.debug("JSON string: %s", s)
