@@ -128,7 +128,7 @@ $(document).ready(function() {
         // renders results for a specific category and returns html
         var num_items = cres.length;
         var ht = "";
-        for (i = 0; i < num_items; i++) {
+        for (var i = 0; i < num_items; i++) {
             if (cres[i].score < min_match || cres[i].wc < min_wc) {
                 continue;
             }
@@ -166,8 +166,6 @@ $(document).ready(function() {
         for (var src in score_board) {
             if (score_board[src].status == 2) {
                 if (fin_count == 0) {
-                    // switch on result
-                    //$(".spectrum").removeClass("do-not-show");
                     $(".spectrum").fadeIn("slow");
                 }
                 ++fin_count;
@@ -176,6 +174,7 @@ $(document).ready(function() {
             }
             if (score_board[src].status == -1) {
                 ++fail_count;
+                score_board[src].status == -2;
             }
         }
         score_board_fill = (fin_count + fail_count) / score_board_size;
@@ -188,14 +187,14 @@ $(document).ready(function() {
         if ((fin_count + fail_count) < score_board_size) {
             var timeout = 500 + 2000 * (1 - score_board_fill);
             console.log("fin_count: " + fin_count);
-            console.log("setting keep_score timeout to " + timeout + "ms");
             setTimeout(keep_score, timeout);
         }
         else {
             // switch off progress bar
             setTimeout(function() {
                 $("#progress-box").slideUp("fast");
-                $("#results-top-box").fadeIn("fast");}, 500);
+                $("#results-top-box").fadeIn("fast");}, 750);
+            console.dir(score_board);
         }
     }
     var fin_count = 0;
