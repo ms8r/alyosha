@@ -12,9 +12,6 @@ import rq
 from alyosha import alyosha as al
 from alyosha import reference as REF
 
-# NOTE: for ajax/rq testing only:
-import utils
-import time
 
 # Minimum word count for search result to be eligible
 MIN_WC = 400
@@ -37,8 +34,7 @@ redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 urlparse.uses_netloc.append('redis')
 url = urlparse.urlparse(redis_url)
 redis_conn = redis.StrictRedis(host=url.hostname, port=url.port)
-# TODO: change back to 500 after testing
-REDIS_EXPIRE = 5000
+REDIS_EXPIRE = 1000
 
 render = web.template.render('templates/', base='layout')
 

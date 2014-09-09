@@ -193,10 +193,9 @@ $(document).ready(function() {
         }
         else {
             // switch off progress bar
-            // $("#progress-box").addClass("do-not-show");
-            $("#progress-box").slideUp("fast");
-            // $("#results-top-box").removeClass("do-not-show");
-            $("#results-top-box").fadeIn("fast");
+            setTimeout(function() {
+                $("#progress-box").slideUp("fast");
+                $("#results-top-box").fadeIn("fast");}, 500);
         }
     }
     var fin_count = 0;
