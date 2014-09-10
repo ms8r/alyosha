@@ -35,7 +35,7 @@ redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 # url = urlparse.urlparse(redis_url)
 # redis_conn = redis.StrictRedis(host=url.hostname, port=url.port)
 redis_conn = redis.from_url(redis_url)
-REDIS_EXPIRE = 1000
+REDIS_EXPIRE = 1200
 
 render = web.template.render('templates/', base='layout')
 
@@ -44,7 +44,10 @@ urls = (
     '/request', 'request',
     '/results', 'results',
     '/scorematches', 'score_matches',
-    '/error', 'error'
+    '/error', 'error',
+    '/thify-what', 'thify_what',
+    '/thify-why', 'thify_why',
+    '/thify-how', 'thify_how'
 )
 
 urlForm = form.Form(
@@ -278,6 +281,27 @@ class error(object):
     def GET(self):
         i = web.input(msg='', back_link='/')
         return render.error(i.msg, i.back_link)
+
+
+class thify_what(object):
+
+    def GET(self):
+        return render.thify_what(msg='')
+
+
+
+class thify_why(object):
+
+    def GET(self):
+        return render.thify_why(msg='')
+
+
+
+class thify_how(object):
+
+    def GET(self):
+        return render.thify_how(msg='')
+
 
 
 def dedupe(items):

@@ -12,7 +12,8 @@ body
     text-align: left;
 }
 
-#index-page, #request-page, #results-page {
+#index-page, #request-page, #results-page,
+#thify-what, #thify-why, #thify-how {
     background-color: #f7f7f7;
 }    
 
@@ -23,10 +24,12 @@ body
   margin-right: auto;
 }
 
+/*
 * {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
+*/
 
 .bottom-spacer {
     height: 50px;
@@ -149,7 +152,101 @@ margin: 1em 2em 0 0;
     border-spacing: 0;
 }
 
+/*=== navigation bar ===*/
+#nav-bar-top {
+    white-space: nowarp;
+    display: flex;
+    height: auto;
+    width: 100%;
+    /* background: none repeat scroll 0% 0% #555555; */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    margin-left: -3000px;
+    padding-left: 3000px;
+    margin-right: -3000px;
+    padding-right: 3000px;
+}
 
+ul.nav-main {
+    list-style: none;
+    padding-left: 0;
+    margin-left: 0;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.nav-main li {
+    display: inline;
+}
+
+#nav-entry-home a {
+    font-family: 'Special Elite', cursive;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #000080;
+}
+
+.nav-main a {
+  display: inline-block;
+  padding: 0px 10px 0px 10px;
+  text-decoration: none;
+  color: #555555;
+}
+
+#index-page #nav-entry-home a,
+#request-page #nav-entry-home a,
+#results-page #nav-entry-home a {
+    background: #555555;
+    color: #FFFFFF;
+    margin-top: -20px;
+    padding-top: 20px;
+    margin-left: -20px;
+    padding-left: 25px;
+}
+
+#thify-what #nav-entry-what a {
+    background: #555555;
+    color: #FFFFFF;
+    margin-top: -20px;
+    padding-top: 20px;
+    margin-left: -20px;
+    padding-left: 20px;
+    margin-bottom: -4px;
+    padding-bottom: 4px;
+}
+
+#thify-why #nav-entry-why a {
+    background: #555555;
+    color: #FFFFFF;
+    margin-top: -20px;
+    padding-top: 20px;
+    margin-left: -20px;
+    padding-left: 20px;
+    margin-bottom: -4px;
+    padding-bottom: 4px;
+}
+
+#thify-how #nav-entry-how a {
+    background: #555555;
+    color: #FFFFFF;
+    margin-top: -20px;
+    padding-top: 20px;
+    margin-left: -20px;
+    padding-left: 20px;
+    margin-bottom: -4px;
+    padding-bottom: 4px;
+}
+
+
+
+.nav-main a:link,
+.nav-main a:visited {
+  text-decoration: none;
+}
+.nav-main a:hover,
+.nav-main a:active,
+.nav-main a:focus {
+  text-decoration: underline;
+}
 /*===submit button styling===*/
 /* styling copied from Google search page */
 .submit-button {
@@ -181,7 +278,7 @@ margin: 1em 2em 0 0;
     font-size: 1.5em;
     font-weight: normal;
     margin: 50px 0 10px 0;
-}    
+}
 
 
 
@@ -235,7 +332,7 @@ text-align: center;
     font-size: 1.2em;
     font-weight: normal;
     margin: 30px 0 10px 0;
-}    
+}
 
 .float-right {
     float: right;

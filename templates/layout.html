@@ -2,8 +2,6 @@ $def with (content)
 
 $ static_prefix = 'https://s3.amazonaws.com/alyosha.static'
 
-$ static_prefix = ''
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -28,6 +26,14 @@ $code:
         attrs = 'id={0}'.format(content.page_id)
 
 <body $attrs>
+     <div id="nav-bar-top">
+        <ul class="nav-main">
+            <li id="nav-entry-home"><a href="/">Thify</a></li>
+            <li id="nav-entry-what"><a href="/thify-what">What?</a></li>
+            <li id="nav-entry-why"><a href="/thify-why">Why?</a></li>
+            <li id="nav-entry-how"><a href="/thify-how">How?</a></li>
+        </ul>
+     </div>
 
      <div id="page-wrapper">
          $:content
