@@ -142,6 +142,9 @@ $(document).ready(function() {
 
     function insert_result(res_src, min_match, min_wc) {
         var rsb = score_board[res_src];
+        if (rsb.result.length == 0) {
+            return;
+        }
         cat_res[rsb.cat] = cat_res[rsb.cat].concat(rsb.result);
         cat_res[rsb.cat].sort(compare_score);
         //now update HTML:
