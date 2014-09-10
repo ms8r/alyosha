@@ -12,11 +12,24 @@ $(document).ready(function() {
     };
     var cat_src = {};
     var params = $("param.cat-src");
+    var max_cat_src_num = 0;
     for (var i = 0; i < params.length; i++) {
         var cat = params.eq(i).attr("name");
         var src_str = params.eq(i).attr("value");
         if (src_str.length > 0) {
             cat_src[cat] = src_str.split(' ');
+            max_cat_src_num = Math.max(max_cat_src_num, cat_src[cat].length);
+        }
+    }
+    // construct a source sequence that traverses categories
+    // so can submit jobs for top sources across categories
+    // first
+    var src_seq = [];
+    for (var i = 0; i < max_cat_src_num; i++) {
+        for (var cat in cat_src) {
+            if (i < cat_src[cat].length) {
+                src_seq.push(cat_src[cat][i]);
+            }
         }
     }
 
@@ -33,16 +46,18 @@ $(document).ready(function() {
                                 //  2: have result
                                 //  3: published
                                 // -1: failed
+                                // -2: included in fail count
                 'result': null
             };
             score_board_size++;
         }
     }
-    var score_board_fill = 0;
+    var score_board_fill = 0.;
 
     // intial call: submit parameters and get job-id:
-    for (var src in score_board) {
-        pmap['src'] = src;
+    // for (var src in score_board) {
+    for (var i = 0; i < src_seq.length; i++) {
+        pmap['src'] = src_seq[i];
         $.ajax({
             url: 'scorematches',
             data: pmap,
