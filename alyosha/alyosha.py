@@ -144,6 +144,42 @@ class WebArticle(object):
     # stemmer used to normalize words for article comparison
     stemmer = nltk.stem.SnowballStemmer('english')
 
+    # maps NLTK POS tags onto WordNet tags for lemmatizing
+    # NOTE: not all tags are mapped; look ups need to provide default via get
+    _pos_map = {
+            'JJ': 'a',
+            'JJR': 'a',
+            'JJRJR': 'a',
+            'JJS': 'a',
+            'JJ|RB': 'a',
+            'JJ|VBG': 'a',
+            'MD': 'v',
+            'NN': 'n',
+            'NNP': 'n',
+            'NNPS': 'n',
+            'NNS': 'n',
+            'NN|NNS': 'n',
+            'NN|SYM': 'n',
+            'NN|VBG': 'n',
+            'NP': 'n',
+            'RB': 'r',
+            'RBR': 'r',
+            'RBS': 'r',
+            'RB|RP': 'r',
+            'RB|VBG': 'r',
+            'VB': 'v',
+            'VBD': 'v',
+            'VBD|VBN': 'v',
+            'VBG': 'v',
+            'VBG|NN': 'v',
+            'VBN': 'v',
+            'VBP': 'v',
+            'VBP|TO': 'v',
+            'VBZ': 'v',
+            'VP': 'v',
+            'WRB': 'r'
+    }
+
     def __init__(self, ref_url, stop_words=None, late_kills=None):
         """
         Arguments:
@@ -169,8 +205,8 @@ class WebArticle(object):
         if p_url[2].endswith(tuple(WebArticle.exclude_formats)):
             raise ArticleFormatError(p_url[2])
 
-        if not late_kills:
-            late_kills = []
+        self._stop_words = frozenset(stop_words) if stop_words else []
+        self._late_kills = frozenset(late_kills) if late_kills else []
 
         self.url = ref_url
         try:
@@ -208,13 +244,12 @@ class WebArticle(object):
                 (self.wcount, self.title))
 
         sl = [WebArticle.stemmer.stem(w) for w in self.wlist if w not in
-              REF.stop_words.union(REF.late_kills) and len(w) > 2]
+              self._stop_words.union(self._late_kills) and len(w) > 2]
         self.stem_tops = Counter(sl).most_common()
 
-    def search_string(self, num_terms=6, use_phrases=True,
-            force_phrases=True):
+    def search_string(self, num_terms=6, use_phrases=True, force_phrases=True):
         """
-        Returns a search string based on the articles top words and phrases.
+        Returns a search string based on the article's top words and phrases.
 
         Arguments:
         ----------
@@ -242,7 +277,8 @@ class WebArticle(object):
         except AttributeError:
             self._top_words = [w for w, c in
                     Counter(self._lemmas).most_common() if w not in
-                    REF.late_kills]
+                    self._stop_words.union(self._late_kills) and len(w) > 2
+                    and not re.match(r'\d{1,3}\Z', w)]
         num_phrases = 0
         result = ""
         words = self._top_words
@@ -278,12 +314,12 @@ class WebArticle(object):
     def _make_lemmas(self, min_char=2):
         """
         Builds and stores lemmatized word list based on `self.wlist` and
-        `REF.stop_words`, including only words with at least `min_char`
-        characters. Result will be assigned to `self.lemmas`.
+        `self._stop_words`, including only words with at least `min_char`
+        characters. Result will be assigned to `self._lemmas`.
         """
         wnl = nltk.WordNetLemmatizer()
-        tagged = [(w, REF.pos_map.get(t, 'n')) for w, t in
-                  nltk.pos_tag(self.wlist) if w not in REF.stop_words and
+        tagged = [(w, WebArticle._pos_map.get(t, 'n')) for w, t in
+                  nltk.pos_tag(self.wlist) if w not in self._stop_words and
                   len(w) >= min_char]
         self._lemmas = [wnl.lemmatize(*t) for t in tagged]
 

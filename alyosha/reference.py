@@ -153,39 +153,3 @@ late_kills = frozenset([
     'day', 'use',
 ])
 
-
-# maps NLTK POS tags onto WordNet tags for lemmatizing
-# NOTE: not all tags are mapped; looks need to provide default via get
-pos_map = {
-        'JJ': 'a',
-        'JJR': 'a',
-        'JJRJR': 'a',
-        'JJS': 'a',
-        'JJ|RB': 'a',
-        'JJ|VBG': 'a',
-        'MD': 'v',
-        'NN': 'n',
-        'NNP': 'n',
-        'NNPS': 'n',
-        'NNS': 'n',
-        'NN|NNS': 'n',
-        'NN|SYM': 'n',
-        'NN|VBG': 'n',
-        'NP': 'n',
-        'RB': 'r',
-        'RBR': 'r',
-        'RBS': 'r',
-        'RB|RP': 'r',
-        'RB|VBG': 'r',
-        'VB': 'v',
-        'VBD': 'v',
-        'VBD|VBN': 'v',
-        'VBG': 'v',
-        'VBG|NN': 'v',
-        'VBN': 'v',
-        'VBP': 'v',
-        'VBP|TO': 'v',
-        'VBZ': 'v',
-        'VP': 'v',
-        'WRB': 'r'
-}
