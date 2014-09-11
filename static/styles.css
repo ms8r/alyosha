@@ -5,7 +5,7 @@
 
 body
 {
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: Verdana, Helvetica, Arial, sans-serif;
     font-size: 87.5%;
     line-height: 1.5;
     word-wrap: break-word;
@@ -22,6 +22,21 @@ body
   max-width: 960px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.what-why-how-wrapper {
+  min-height: 100%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+}
+
+.what-why-how-wrapper blockquote {
+    border-left: 4px solid #DDDDDD;
+    color: #777777;
+    font-style: italic;
+    padding: 0 15px;
 }
 
 /*
@@ -48,7 +63,7 @@ a:focus {
 /*===Headings===*/
 h1
 {
-font-family:Helvetica, Arial, sans-serif;
+font-family:Verdana, Helvetica, Arial, sans-serif;
 text-indent: 0;
 text-align: left;
 margin: 50px 0 25px 0;
@@ -59,7 +74,7 @@ page-break-before: always;
 
 h2
 {
-font-family:Helvetica, Arial, sans-serif;
+font-family:Verdana, Helvetica, Arial, sans-serif;
 text-indent: 0;
 text-align: left;
 margin: 50px 0 10px 0;
@@ -69,7 +84,7 @@ font-weight: bold;
 
 h3
 {
-font-family:Helvetica, Arial, sans-serif;
+font-family:Verdana, Helvetica, Arial, sans-serif;
 text-indent: 0;
 text-align: left;
 font-size: 1.4em;
@@ -78,7 +93,7 @@ font-weight: bold;
 
 h4
 {
-font-family:Helvetica, Arial, sans-serif;
+font-family:Verdana, Helvetica, Arial, sans-serif;
 text-indent: 0;
 text-align: left;
 font-size: 1.2em;
@@ -152,6 +167,11 @@ margin: 1em 2em 0 0;
     border-spacing: 0;
 }
 
+span.thify-font-face {
+    font-family: 'Special Elite', cursive;
+    color: #000080;
+}
+
 /*=== navigation bar ===*/
 #nav-bar-top {
     white-space: nowarp;
@@ -208,8 +228,8 @@ ul.nav-main {
     padding-top: 20px;
     margin-left: -20px;
     padding-left: 20px;
-    margin-bottom: -4px;
-    padding-bottom: 4px;
+    margin-bottom: -5px;
+    padding-bottom: 5px;
 }
 
 #thify-why #nav-entry-why a {
@@ -219,8 +239,8 @@ ul.nav-main {
     padding-top: 20px;
     margin-left: -20px;
     padding-left: 20px;
-    margin-bottom: -4px;
-    padding-bottom: 4px;
+    margin-bottom: -5px;
+    padding-bottom: 5px;
 }
 
 #thify-how #nav-entry-how a {
@@ -230,8 +250,8 @@ ul.nav-main {
     padding-top: 20px;
     margin-left: -20px;
     padding-left: 20px;
-    margin-bottom: -4px;
-    padding-bottom: 4px;
+    margin-bottom: -5px;
+    padding-bottom: 5px;
 }
 
 
@@ -404,7 +424,7 @@ div#progress-bar {
 
 #results-page .spectrum h2
 {
-    font-family:Helvetica, Arial, sans-serif;
+    font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
     font-size: 1.2em;
     font-weight: bold;
@@ -414,7 +434,7 @@ div#progress-bar {
 
 #results-page .spectrum h3
 {
-    font-family:Helvetica, Arial, sans-serif;
+    font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
     text-align: left;
     font-size: 1.0em;
@@ -424,7 +444,7 @@ div#progress-bar {
 
 #results-page .spectrum h4
 {
-    font-family:Helvetica, Arial, sans-serif;
+    font-family:Verdana, Helvetica, Arial, sans-serif;
     text-indent: 0;
     text-align: left;
     font-size: 0.9em;
@@ -472,7 +492,7 @@ div.banner-box {
     color: #ffffff;
     font-size: 3em;
     line-height: 1;
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: Verdana, Helvetica, Arial, sans-serif;
     font-weight: normal;
 }
 

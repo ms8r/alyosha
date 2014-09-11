@@ -1,0 +1,27 @@
+#! /bin/bash
+
+#
+# Converts markdown files in directory `whatwhyhow` to html and updates the
+# content of the corresponding templates in directory `templates`.
+#
+# Naming conventions:
+#   Mardown files: {name}.md
+#   Templates:     thify_{name}.html
+#
+# Will replace all content in div.what-why-how-wrapper (which must be the
+# last part of the template file)
+#
+
+template_dir=templates
+md_dir=wwh
+
+for line in $(ls -d $md_dir/*.md)
+do
+    md_fname=${line##*/}
+    ht_file=$template_dir/thify_${md_fname%.md}.html
+    sed -i.bak '/<div class="what-why-how-wrapper">/,$d' $ht_file
+    echo '<div class="what-why-how-wrapper">' >> $ht_file
+    pandoc -S -t html $line | sed 's/\<Thify\>/<span class="thify-font-face">&<\/span>/g' >>  $ht_file
+    echo '</div>' >> $ht_file
+    echo '<!-- DO NOT ADD CONTENT BELOW THIS LINE - WILL BE DELETED DURING MARKDOWN UPDATE -->' >> $ht_file
+done
