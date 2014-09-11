@@ -115,12 +115,13 @@ class index(object):
         if rfc3987.match(form_data.URL, rule='URI_reference'):
             parsed = urlparse.urlparse(form_data['URL'], scheme='http')
             ref_url = parsed.scheme + '://' + '/'.join([parsed.netloc,
-                    parsed.path]).lstrip('/')
+                    parsed.path.lstrip('/')]).lstrip('/')
         else:
             ref_url = None
 
-        if ref_url and check_spec:
-            params = {'url': ref_url}
+        if ref_url:
+            params = {'url': ref_url,
+                      'checkspec': int(check_spec)}
             raise web.seeother('/request?' + urlencode(params), '/')
         else:
             params = {
@@ -136,7 +137,7 @@ class request(object):
 
     def GET(self):
 
-        i = web.input(url='', back_link='/')
+        i = web.input(url='', back_link='/', checkspec='0')
         try:
             wa = al.WebArticle(i.url, REF.stop_words, REF.late_kills)
             logging.debug("article '%s' (%d words) at url='%s'",
@@ -157,6 +158,29 @@ class request(object):
         ]
         search_str_choices = list(dedupe([wa.search_string(num_terms=6, **sso)
                                           for sso in search_str_opts]))
+
+        # store essentials on Redis:
+        wa_key = al.RedisWA.redis_store(redis_conn, wa.url, wa.title,
+                wa.wcount, wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
+        redis_conn.expire(wa_key, REDIS_EXPIRE)
+
+        if not int(i.checkspec):
+            # use 'unforced phrases' for search string if available
+            ssi = 1 if len(search_str_choices) > 1 else 0
+            src_sel = [s.id for s in REF.source_sites
+                       if s.weight <= MAX_QUALITY_WEIGHT]
+            params = {
+                    'wa_key': wa_key,
+                    'search_str': search_str_choices[ssi],
+                    'sources': encode_src_sel(src_sel),
+                    'match_score': int(MIN_MATCH * 100),
+                    'min_wc': MIN_WC,
+                    'back_days': 0,
+            }
+            logging.debug("request parameter: %s" % params)
+            raise web.seeother('/results?' + urlencode(params))
+
+
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
                 description='', value=search_str_choices[0],
@@ -173,11 +197,7 @@ class request(object):
                 size='40', id='cust-search-entry'))
         formDict['search_strings'] = form.Form(*radio_buttons)
 
-        # store essentials on Redis:
-        wa_key = al.RedisWA.redis_store(redis_conn, wa.url, wa.title, wa.wcount,
-                wa.stem_tops[:MATCH_SCORE_LEN], search_str_choices)
-        redis_conn.expire(wa_key, REDIS_EXPIRE)
-        # put key string into hidden form field for retrieval by POST:
+        # put redis key string into hidden form field for retrieval by POST:
         formDict['wa_key'] = form.Form(form.Textbox(
                 'waKey',
                 form.notnull,
@@ -316,13 +336,15 @@ def dedupe(items):
             seen.add(item)
 
 
-def encode_src_sel(form_data):
+def encode_src_sel(src_sel):
     """
     Encodes selected sources as binary flags an returns as a decimal number.
+    `src_sel` can be ani kind of object that supports `in` for membership
+    checking (e.g. form_data dict).
     """
     selection = 0
     for i, s in enumerate(REF.source_sites):
-        if s.id in form_data:
+        if s.id in src_sel:
             selection += 2 ** i
     return selection
 
