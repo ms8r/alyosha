@@ -134,7 +134,7 @@ $(document).ready(function() {
         };
     }
 
-    var max_polls = 30;
+    var max_polls = 50;
     for (var src in score_board) {
         setTimeout(pollForID(src), 1000);
     }

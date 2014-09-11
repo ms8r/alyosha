@@ -178,7 +178,6 @@ class request(object):
             logging.debug("request parameter: %s" % params)
             raise web.seeother('/results?' + urlencode(params))
 
-
         # set "no phrases" search string as default:
         radio_buttons = [form.Radio('SearchStr', [search_str_choices[0]],
                 description='', value=search_str_choices[0],
