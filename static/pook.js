@@ -1,8 +1,5 @@
 $(document).ready(function() {
-
     // extract parameters for sources and wa_key:
-    // NOTE: need to also provide prios so we can sequence
-    // submissions accordingly (or pre-sort params within cat)
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
         search_str: $("param#search-str").attr("value"),
@@ -22,7 +19,7 @@ $(document).ready(function() {
         }
     }
     // construct a source sequence that traverses categories
-    // so can submit jobs for top sources across categories
+    // so we can submit jobs for top sources across categories
     // first
     var src_seq = [];
     for (var i = 0; i < max_cat_src_num; i++) {
@@ -47,7 +44,9 @@ $(document).ready(function() {
                                 //  3: published
                                 // -1: failed
                                 // -2: included in fail count
-                'result': null
+                'result': null,
+                'poll_count': 0
+
             };
             score_board_size++;
         }
@@ -104,9 +103,20 @@ $(document).ready(function() {
                                 score_board[json.src].result = [];
                                 break;
                             default:
-                                var timeout = fetch_timeout +
-                                              2000 * (1 - score_board_fill);
-                                setTimeout(pollForID(src), timeout);
+                                ++score_board[json.src].poll_count;
+                                console.log(json.src + " polling count: "
+                                    + score_board[json.src].poll_count);
+                                if (score_board[json.src].poll_count > max_polls) {
+                                    console.log(json.src +
+                                        " reached max. polls, setting to 'failed'");
+                                    score_board[json.src].status = -1;
+                                    score_board[json.src].result = [];
+                                }
+                                else {
+                                    var timeout = fetch_timeout +
+                                                  2000 * (1 - score_board_fill);
+                                    setTimeout(pollForID(src), timeout);
+                                }
                         }
                     },
                     timeout: 5000,
@@ -124,6 +134,7 @@ $(document).ready(function() {
         };
     }
 
+    var max_polls = 30;
     for (var src in score_board) {
         setTimeout(pollForID(src), 1000);
     }
@@ -147,9 +158,11 @@ $(document).ready(function() {
             if (cres[i].score < min_match || cres[i].wc < min_wc) {
                 continue;
             }
-            ht = ht + '<h3><a href="' + cres[i]['url'] + '">' + cres[i]['title'] + '</a></h2>'
+            ht = ht + '<h3><a href="' + cres[i]['url'] + '">'
+                    + cres[i]['title'] + '</a></h2>'
                     + '<h4>' + cres[i]['link'] + '</h3>'
-                    + '<p class="match-score">' + cres[i]['wc'] + ' words, score: ' + cres[i]['score'].toFixed(2) + '</p>'
+                    + '<p class="match-score">' + cres[i]['wc']
+                    + ' words, score: ' + cres[i]['score'].toFixed(2) + '</p>'
                     + '<p class="res-description">' + cres[i]['desc'] + '</p>';
         }
         return ht;

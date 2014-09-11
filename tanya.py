@@ -17,10 +17,8 @@ from alyosha import reference as REF
 MIN_WC = 400
 # Minimum match score for search result to be eligible
 MIN_MATCH = 0.4
-# Number of results per catergory (left-center-right)
-NUM_MATCHES = 2
 # Cut-off for source site's quality weight to be included in search (heavy
-# sinks to bottom, [0, 100]
+# sinks to bottom, [0, 100])
 MAX_QUALITY_WEIGHT = 50
 # number of stem_top list elements to consider for match score:
 MATCH_SCORE_LEN = 20
