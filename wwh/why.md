@@ -30,12 +30,13 @@ He compares two types of judgement style, first characterized by the ancient Gre
 > political spectrum, in part because the smartest Foxes cherry-pick idea
 > fragments from the whole array of Hedgehogs.
 
-Thify is a very small attempt to help us be more like foxes rather than hedgehogs on issues where the difference counts. By default our mind is lazy and will be content with the first coherent narrative it finds or can construct.  Thify tries to make it a little easier for us not to stop there. Go on and find out what the other side(s) of the issue are and pick and choose - don't let others do your thinking. And once we have looked at an issue this way we hopefully can have a constructive debate again that straddles ideological silos. 
+Thify is a very small attempt to help us be more like foxes rather than hedgehogs on issues where the difference counts. By default our mind is lazy and will be content with the first coherent narrative it finds or can construct.  Thify tries to make it a little easier for us not to stop there. Go on and find out what the other sides of the issue are and pick and choose - don't let others do your thinking for you. And once we have looked at an issue this way we hopefully can have a constructive debate again that straddles ideological silos. 
 
 To quote Habermas once more: [^leadershipleitkultur] 
 
 > Democracy depends on the belief of the people that there is some scope left 
-> for collectively shaping a challenging future.
+> for collectively shaping a challenging future.  
+> 
 
 
 [^communicativeaction]: Wikipedia: ["Communicative Action"](http://en.wikipedia.org/wiki/Communicative_action)

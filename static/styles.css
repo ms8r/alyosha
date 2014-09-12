@@ -13,8 +13,10 @@ body
 }
 
 #index-page, #request-page, #results-page,
-#thify-what, #thify-why, #thify-how {
+#thify-what, #thify-why, #thify-how,
+#thify-thanks, #thify-contact {
     background-color: #f7f7f7;
+    color: #333333;
 }    
 
 #page-wrapper {
@@ -221,29 +223,11 @@ ul.nav-main {
     padding-left: 25px;
 }
 
-#thify-what #nav-entry-what a {
-    background: #555555;
-    color: #FFFFFF;
-    margin-top: -20px;
-    padding-top: 20px;
-    margin-left: -20px;
-    padding-left: 20px;
-    margin-bottom: -5px;
-    padding-bottom: 5px;
-}
-
-#thify-why #nav-entry-why a {
-    background: #555555;
-    color: #FFFFFF;
-    margin-top: -20px;
-    padding-top: 20px;
-    margin-left: -20px;
-    padding-left: 20px;
-    margin-bottom: -5px;
-    padding-bottom: 5px;
-}
-
-#thify-how #nav-entry-how a {
+#thify-what #nav-entry-what a ,
+#thify-why #nav-entry-why a, 
+#thify-how #nav-entry-how a, 
+#thify-thanks #nav-entry-thanks a,
+#thify-contact #nav-entry-contact a {
     background: #555555;
     color: #FFFFFF;
     margin-top: -20px;

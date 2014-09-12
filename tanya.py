@@ -45,7 +45,9 @@ urls = (
     '/error', 'error',
     '/thify-what', 'thify_what',
     '/thify-why', 'thify_why',
-    '/thify-how', 'thify_how'
+    '/thify-how', 'thify_how',
+    '/thify-thanks', 'thify_thanks',
+    '/thify-contact', 'thify_contact',
 )
 
 urlForm = form.Form(
@@ -319,6 +321,17 @@ class thify_how(object):
     def GET(self):
         return render.thify_how(msg='')
 
+
+class thify_thanks(object):
+
+    def GET(self):
+        return render.thify_thanks(msg='')
+
+
+class thify_contact(object):
+
+    def GET(self):
+        return render.thify_contact(msg='')
 
 
 def dedupe(items):
