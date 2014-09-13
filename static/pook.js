@@ -2,7 +2,7 @@ $(document).ready(function() {
     // extract parameters for sources and wa_key:
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
-        search_str: $("param#search-str").attr("value")
+        search_str: $("param#search-str").attr("value"),
         match_score: parseFloat($("param#match-score").attr("value")),
         min_wc: parseInt($("param#min-wc").attr("value"), 10),
         back_days: parseInt($("param#back-days").attr("value"), 10)
