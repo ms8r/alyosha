@@ -58,7 +58,11 @@ a:visited {
 }
 
 a:link {
-    color: #000080;
+    color: #0000AA;
+}
+
+a:visited {
+    color: #000055;
 }
 
 a:hover,
@@ -441,7 +445,7 @@ div#progress-bar {
     text-align: left;
     font-size: 0.9em;
     font-weight: normal;
-    color: #1111aa;
+    color: #555555;
     margin: 0 0 0 0;
 }
 
