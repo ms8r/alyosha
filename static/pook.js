@@ -3,6 +3,9 @@ $(document).ready(function() {
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
         search_str: $("param#search-str").attr("value")
+        match_score: parseFloat($("param#match-score").attr("value")),
+        min_wc: parseInt($("param#min-wc").attr("value"), 10),
+        back_days: parseInt($("param#back-days").attr("value"), 10)
     };
     var cat_src = {};
     var params = $("param.cat-src");
