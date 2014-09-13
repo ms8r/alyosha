@@ -56,6 +56,11 @@ a:link,
 a:visited {
   text-decoration: none;
 }
+
+a:link {
+    color: #000080;
+}
+
 a:hover,
 a:active,
 a:focus {
@@ -171,7 +176,8 @@ margin: 1em 2em 0 0;
 
 span.thify-font-face {
     font-family: 'Special Elite', cursive;
-    color: #000080;
+    color: #e65115;
+    /* color: #000080; */
 }
 
 /*=== navigation bar ===*/
@@ -204,7 +210,8 @@ ul.nav-main {
     font-family: 'Special Elite', cursive;
     font-size: 1.2em;
     font-weight: bold;
-    color: #000080;
+    color: #e65115;
+    /* color: #000080; */
 }
 
 .nav-main a {
@@ -302,7 +309,8 @@ text-align: center;
     line-height: 1.0;
     font-family: 'Special Elite', cursive;
     font-size: 3.0em;
-    color: #000080;
+    color: #e65115;
+    /* color: #000080; */
 }
 
 #thify-banner h2 {

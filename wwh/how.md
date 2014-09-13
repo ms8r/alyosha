@@ -29,4 +29,4 @@ That's it! If you click on the "Check search specs" button after entering your U
 
 * And last but not least it uses [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript) and [jQuery](http://jquery.com/) for some client side scripting that allows [asynchronous communication](http://en.wikipedia.org/wiki/Ajax_%28programming%29) with the server and dynamic/selective page updating.
 
-The complete code for Thify can be found on [GitHub](https://github.com/ms8r/alyosha) under the project's original name, *[Alyosha](/thify_thanks)*.
+The complete code for Thify can be found on [GitHub](https://github.com/ms8r/alyosha) under the project's original name, *[Alyosha](/thify-thanks)*.
