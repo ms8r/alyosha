@@ -1,9 +1,7 @@
 Alyosha - A counter recommendation engine for news feeds
 ========================================================
 
-*Note: This project is in its very early stages...*
-
-There has been some discussion in the media about how the filtering algorithms behind news feeds may increase polarization in a society. As a recent [comment](http://mathbabe.org/2014/06/30/thanks-for-a-great-case-study-facebook/#comments) on [mathbabe.org](http://mathbabe.org) put it: 
+There is an increasingly vibrant discussion about how the filtering algorithms behind news feeds reinforce existing biases and prejudices. As a recent [comment](http://mathbabe.org/2014/06/30/thanks-for-a-great-case-study-facebook/#comments) on [mathbabe.org](http://mathbabe.org) put it: 
 
 > There was a time when there were only three major news sources available to
 > people on a daily basis and the news they provided was governed by a
