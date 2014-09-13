@@ -2,10 +2,7 @@ $(document).ready(function() {
     // extract parameters for sources and wa_key:
     var pmap = {
         wa_key: $("param#wa-key").attr("value"),
-        search_str: $("param#search-str").attr("value"),
-        match_score: parseFloat($("param#match-score").attr("value")),
-        min_wc: parseInt($("param#min-wc").attr("value"), 10),
-        back_days: parseInt($("param#back-days").attr("value"), 10)
+        search_str: $("param#search-str").attr("value")
     };
     var cat_src = {};
     var params = $("param.cat-src");
@@ -51,7 +48,21 @@ $(document).ready(function() {
             score_board_size++;
         }
     }
-    var score_board_fill = 0.;
+    var score_board_fill = 0.0;
+
+    // complete function for ajax call to update scoreboard
+    // if not success (needs closure for src)
+    function ajax_complete(src) {
+        return function(xhr, status) {
+            console.log(src + " status: " + status);
+            if (status !== 'success') {
+                score_board[src].status = -1;
+            }
+            else {
+                console.log(src + " ajax success: " + xhr.responseText);
+            }
+        }
+    }
 
     // intial call: submit parameters and get job-id:
     // for (var src in score_board) {
@@ -66,27 +77,24 @@ $(document).ready(function() {
                 score_board[json.src].job_id = json.job_id;
                 score_board[json.src].status = 1;
             },
-            timeout: 5000,
+            timeout: 10000,
             eror: function(xhr, status, errorThrown) {
-                score_board[xhr.responseJSON.src].status = -1;
                 console.log("Error: " + errorThrown);
                 console.log("Status: " + status);
                 console.dir(xhr);
             },
-            complete: function(xhr, status) {
-                console.log("submitted: " + xhr.responseText);
-            }
+            complete: ajax_complete(src_seq[i])
         });
     }
 
     // now check for results:
     function pollForID(src) {
         return function() {
-            var fetch_timeout = 500;
+            var fetch_timeout = 1000;
             if (score_board[src].status == 0) {
                 setTimeout(pollForID(src), fetch_timeout);
             }
-            else {
+            if (score_board[src].status == 1) {
                 $.ajax({
                     url: 'scorematches',
                     data: {'src': src, 'job_id': score_board[src].job_id},
@@ -103,7 +111,7 @@ $(document).ready(function() {
                                 score_board[json.src].result = [];
                                 break;
                             default:
-                                ++score_board[json.src].poll_count;
+                                score_board[json.src].poll_count++;
                                 console.log(json.src + " polling count: "
                                     + score_board[json.src].poll_count);
                                 if (score_board[json.src].poll_count > max_polls) {
@@ -119,24 +127,21 @@ $(document).ready(function() {
                                 }
                         }
                     },
-                    timeout: 5000,
+                    timeout: 10000,
                     eror: function(xhr, status, errorThrown) {
-                        score_board[xhr.responseJSON.src].status = -1;
                         console.log("Error: " + errorThrown);
                         console.log("Status: " + status);
                         console.dir(xhr);
                     },
-                    complete: function(xhr, status) {
-                        console.log("fetched: " + xhr.responseText);
-                    }
+                    complete: ajax_complete(src)
                 });
             }
         };
     }
 
     var max_polls = 50;
-    for (var src in score_board) {
-        setTimeout(pollForID(src), 1000);
+    for (var i = 0; i < src_seq.length; i++) {
+        setTimeout(pollForID(src_seq[i]), 1000);
     }
 
     // setup results by category:
@@ -199,12 +204,12 @@ $(document).ready(function() {
                 if (fin_count == 0) {
                     $(".spectrum").fadeIn("slow");
                 }
-                ++fin_count;
+                fin_count++;
                 insert_result(src, pmap.match_score/100, pmap.min_wc);
                 score_board[src].status = 3;
             }
             if (score_board[src].status == -1) {
-                ++fail_count;
+                fail_count++;
                 score_board[src].status == -2;
             }
         }
@@ -216,7 +221,7 @@ $(document).ready(function() {
             $("#progress-bar").progressbar({value: score_board_fill * 100});
         };
         if ((fin_count + fail_count) < score_board_size) {
-            var timeout = 500 + 2000 * (1 - score_board_fill);
+            var timeout = 1000 + 2000 * (1 - score_board_fill);
             console.log("fin_count: " + fin_count);
             setTimeout(keep_score, timeout);
         }
