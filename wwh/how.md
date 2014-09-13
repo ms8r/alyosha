@@ -25,7 +25,7 @@ That's it! If you click on the "Check search specs" button after entering your U
 
 * It uses a Python version of [Goose](https://pypi.python.org/pypi/goose-extractor/) by [Xavier Grangier](https://github.com/grangier) for article extraction.
 
-* For processing the extracted text, Thify uses [NLTK](www.nltk.org), the Python *Natural Language Toolkit* that has a strong following among linguistics enthusiasts and academics.
+* For processing the extracted text, Thify uses [NLTK](http://www.nltk.org), the Python *Natural Language Toolkit* that has a strong following among linguistics enthusiasts and academics.
 
 * And last but not least it uses [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript) and [jQuery](http://jquery.com/) for some client side scripting that allows [asynchronous communication](http://en.wikipedia.org/wiki/Ajax_%28programming%29) with the server and dynamic/selective page updating.
 
