@@ -14,31 +14,31 @@ src_cats = OrderedDict([
 
 source_sites = [
         # right outfield:
-        SrcEntry('townhall.com', -0.9, 50, 'Townhall', 'townhall'),
+        SrcEntry('townhall.com', -0.9, 60, 'Townhall', 'townhall'),
         SrcEntry('foxnews.com', -0.7, 50, 'FoxNews', 'foxnews'),
         SrcEntry('weeklystandard.com', -0.7, 45, 'The Weekly Standard', 'weeklystandard'),
         SrcEntry('nationalreview.com', -0.6, 40, 'National Review', 'nationalreview'),
         SrcEntry('econlib.org', -0.6, 30, 'EconLib', 'econlib'),
         # right center:
-        SrcEntry('hoover.org', -0.4, 30, 'Hoover Institution', 'hoover'),
+        SrcEntry('hoover.org', -0.4, 55, 'Hoover Institution', 'hoover'),
         # FT blocks with registration page
         # SrcEntry('ft.com', -0.3, 25, # 'Financial Times', 'ft.com'),
-        SrcEntry('wsj.com', -0.3, 20, 'WSJ', 'wsj'),
+        SrcEntry('wsj.com', -0.3, 55, 'WSJ', 'wsj'),
         SrcEntry('economist.com', -0.3, 15, 'The Economist', 'economist'),
-        SrcEntry('lawfareblog.com', -0.2, 35, 'Lawfare', 'lawfareblog'),
+        SrcEntry('lawfareblog.com', -0.2, 55, 'Lawfare', 'lawfareblog'),
         SrcEntry('csmonitor.com', -0.1, 5, 'Christian Science Monitor', 'csmonitor'),
-        SrcEntry('fivethirtyeight.com', -0.1, 15, 'FiveThirtyEight', 'fivethirtyeight'),
+        SrcEntry('fivethirtyeight.com', -0.1, 55, 'FiveThirtyEight', 'fivethirtyeight'),
         # left center:
         SrcEntry('factcheck.org', 0.1, 60, 'FactCheck', 'factcheck'),
         SrcEntry('theguardian.com', 0.4, 25, 'The Guardian', 'theguardian'),
-        SrcEntry('spiegel.de', 0.2, 50, 'Der Spiegel', 'spiegel'),
+        SrcEntry('spiegel.de', 0.2, 55, 'Der Spiegel', 'spiegel'),
         SrcEntry('brookings.edu', 0.2, 25, 'Brookings', 'brookings'),
         SrcEntry('theatlantic.com', 0.2, 30, 'The Atlantic', 'theatlantic'),
         SrcEntry('slate.com', 0.4, 40, 'Slate Magazine', 'slate'),
         SrcEntry('washingtonpost.com', 0.2, 15, 'Washington Post', 'washingtonpost'),
         SrcEntry('nytimes.com', 0.2, 15, 'New York Times', 'nytimes'),
         # left outfield:
-        SrcEntry('msnbc.com', 0.6, 50, 'MNBC', 'msnbc'),
+        SrcEntry('msnbc.com', 0.6, 55, 'MNBC', 'msnbc'),
         SrcEntry('motherjones.com', 0.7, 30, 'Mother Jones', 'motherjones'),
         SrcEntry('huffingtonpost.com', 0.6, 45, 'Huffington Post', 'huffingtonpost'),
         SrcEntry('dailykos.com', 0.7, 40, 'Daily Kos', 'dailykos'),
