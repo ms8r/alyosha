@@ -125,7 +125,7 @@ $(document).ready(function() {
                                 }
                                 else {
                                     var timeout = fetch_timeout +
-                                                  2000 * (1 - score_board_fill);
+                                                  3000 * (1 - score_board_fill);
                                     setTimeout(pollForID(src), timeout);
                                 }
                         }
