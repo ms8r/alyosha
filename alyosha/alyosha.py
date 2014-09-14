@@ -217,6 +217,7 @@ class WebArticle(object):
         if not result.status_code == requests.codes.ok:
             raise PageRetrievalError(ref_url)
         ht = result.text
+        encoding = result.encoding if result.encoding else 'utf-8'
         ht = ht.encode(result.encoding) if isinstance(ht, unicode) else ht
         # need to parse only to check for excessive number of headings
         parsed = html.fromstring(ht)
