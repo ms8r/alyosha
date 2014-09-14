@@ -20,11 +20,13 @@ A few comments on using Thify:
 
 * Thify is in an "early draft" stage and probably feels a bit rough around the edges. It is not a commercial undertaking. It's a first shot at an idea that came out of an after dinner discussion. We're simply curious to see if we can turn this into something useful. If you have any comments or ideas please [let us now](/thify-contact).
 
+* Thify currently runs on a very minimal development platform. It will likely be a bit slow. It may also take a moment to "wake up" when you first navigate to the site (the application is "idled" after a period of inactivity and has to be restarted when a new request arrives).
+
 * At this point, Thify works (primarily) for new sources in North America. That is not a principal restriction and it would be straightforward to add additional (non-US) sources. If you have any specific suggestions [let me know](thify-contact). Languages other than English would also be an option although that would be a little more involved.
 
 * You get more and better results for topics that already have been in the news for a few days. More news sites will have picked up the topic and search engines will have had a chance to index it.
 
-* I've found that [generating search terms](/thify-how) from your article works pretty well for classic editorial style content and for news articles that are at least 500 words long (the typical article is usually closer to 1,000 words). It can run into trouble with blog posts with plenty of colloquialisms because it may interpret those as [characteristic phrases](http://en.wikipedia.org/wiki/Collocation) even though they have no selectivity for a search engine.
+* I've found that [generating search terms](/thify-how) from an article works pretty well for classic editorial style content and for news articles that are at least 500 words long (the typical article is usually closer to 1,000 words). It can run into trouble with blog posts with plenty of colloquialisms because it may interpret those as [characteristic phrases](http://en.wikipedia.org/wiki/Collocation) even though they have no selectivity for a search engine.
 
 What about privacy?
 -------------------
