@@ -14,7 +14,7 @@ src_cats = OrderedDict([
 
 source_sites = [
         # right outfield:
-        SrcEntry('townhall.com', -0.9, 90, 'Townhall', 'townhall'),
+        SrcEntry('townhall.com', -0.9, 50, 'Townhall', 'townhall'),
         SrcEntry('foxnews.com', -0.7, 50, 'FoxNews', 'foxnews'),
         SrcEntry('weeklystandard.com', -0.7, 45, 'The Weekly Standard', 'weeklystandard'),
         SrcEntry('nationalreview.com', -0.6, 40, 'National Review', 'nationalreview'),
@@ -31,7 +31,7 @@ source_sites = [
         # left center:
         SrcEntry('factcheck.org', 0.1, 60, 'FactCheck', 'factcheck'),
         SrcEntry('theguardian.com', 0.4, 25, 'The Guardian', 'theguardian'),
-        SrcEntry('spiegel.de', 0.2, 55, 'Der Spiegel', 'spiegel'),
+        SrcEntry('spiegel.de', 0.2, 50, 'Der Spiegel', 'spiegel'),
         SrcEntry('brookings.edu', 0.2, 25, 'Brookings', 'brookings'),
         SrcEntry('theatlantic.com', 0.2, 30, 'The Atlantic', 'theatlantic'),
         SrcEntry('slate.com', 0.4, 40, 'Slate Magazine', 'slate'),
