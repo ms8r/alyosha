@@ -3,9 +3,6 @@ Why Thify?
 
 **Think for yourself - a call to (communicative) action** [^communicativeaction]
 
-> Democracy depends on the belief of the people that there is some scope left 
-> for collectively shaping a challenging future. [^leadershipleitkultur]
-
 There appears to be ample empirical evidence that the human mind loves two things: causality and coherence. We can't help but look for causal links and explanations, even if the subject matter is too complex for simple explanations ("the Dow tanked today because investors felt...").  In trying to pick out those causal links, our mind looks for the most coherent story it can construct from the available data points.  Less is clearly more in this case, as additional information and the contradictions it introduces only obfuscate the coherent story that stood out so clearly with only a few data points in sight. This mental reflex is strong - once a few data points provide a coherent narrative, it takes extra effort to "unbelieve" this narrative when new contradictory evidence presents itself. [^kahnemann]
 
 The way we consume news today very neatly reinforces that mental model. Under a *"if you liked this, you will also enjoy this"* policy, the Web's recommendation engines keep feeding us content that smoothly fits with our prior beliefs - coherence everywhere. Conveniently, the rest of the news media has also segmented itself such that the folks on the right can watch FoxNews while the left has MSNBC or John Stewart running. It's candy for our minds. There is no (truly) contradictory information and limited complexity, all helping to feed that coherent causal narrative on everything from health care to foreign policy.
@@ -39,8 +36,6 @@ Thify is a very small attempt to help us be more like foxes rather than hedgehog
 
 
 [^communicativeaction]: Wikipedia: ["Communicative Action"](http://en.wikipedia.org/wiki/Communicative_action)
-
-[^leadershipleitkultur]: [Jürgen Habermas](http://plato.stanford.edu/entries/habermas/) in *[Leadership and Leitkultur](http://www.nytimes.com/2010/10/29/opinion/29Habermas.html?pagewanted=all)*, New York Times, October 28, 2010
 
 [^kahnemann]: see [Daniel Kahneman](http://www.princeton.edu/~kahneman/), *[Thinking, Fast and Slow"](http://www.goodreads.com/book/show/11468377-thinking-fast-and-slow)* (reviewed *[here](http://scholar.harvard.edu/files/shleifer/files/kahneman_review_jel_final.pdf)*)
 
