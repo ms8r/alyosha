@@ -23,7 +23,7 @@ MAX_QUALITY_WEIGHT = 50
 # number of stem_top list elements to consider for match score:
 MATCH_SCORE_LEN = 20
 # Max. wait (in seconds) in between calls to Google:
-GOOGLE_DELAY = 3
+GOOGLE_DELAY = 2
 
 logging.basicConfig(level=logging.DEBUG)
 
